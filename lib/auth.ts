@@ -1,9 +1,9 @@
 import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 
-// Demo users — replace with a real database lookup later.
-// Passwords are bcrypt hashes.  Use `npx bcryptjs <password>` to generate new ones.
+// Demo users
 const DEMO_USERS = [
     {
         id: "1",
@@ -17,12 +17,7 @@ const DEMO_USERS = [
 ];
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-    pages: {
-        signIn: "/auth/signin",
-    },
-    session: {
-        strategy: "jwt",
-    },
+    ...authConfig,
     providers: [
         Credentials({
             name: "Email & Password",
@@ -48,18 +43,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
         }),
     ],
-    callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
-                token.id = user.id;
-            }
-            return token;
-        },
-        async session({ session, token }) {
-            if (session.user && token.id) {
-                session.user.id = token.id as string;
-            }
-            return session;
-        },
-    },
 });
