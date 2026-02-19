@@ -118,8 +118,10 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                     </TableCell>
                     <TableCell className="text-right">
                       {run.status === "success" ? (
-                        <Button size="sm" variant="outline">
-                          View Results
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/api/citeline/runs/${run.id}/artifacts/json`} target="_blank">
+                            View Results
+                          </Link>
                         </Button>
                       ) : (
                         <Clock className="h-4 w-4 ml-auto text-muted-foreground" />
@@ -144,8 +146,8 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                 asChild
                 disabled={!latestSuccessRun}
               >
-                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/json` : "#"} target="_blank">
-                  <FileText className="mr-2 h-4 w-4" /> Medical Chronology (JSON)
+                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/pdf` : "#"} target="_blank">
+                  <FileText className="mr-2 h-4 w-4" /> Medical Chronology (PDF)
                 </Link>
               </Button>
               <Button 
@@ -154,8 +156,8 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                 asChild
                 disabled={!latestSuccessRun}
               >
-                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/csv` : "#"} target="_blank">
-                  <FileText className="mr-2 h-4 w-4" /> Provider List (CSV)
+                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/specials_summary_pdf` : "#"} target="_blank">
+                  <FileText className="mr-2 h-4 w-4" /> Specials Summary (PDF)
                 </Link>
               </Button>
               <Button 
@@ -164,8 +166,8 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                 asChild
                 disabled={!latestSuccessRun}
               >
-                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/json` : "#"} target="_blank">
-                  <FileText className="mr-2 h-4 w-4" /> Missing Records (JSON)
+                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/missing_records_csv` : "#"} target="_blank">
+                  <FileText className="mr-2 h-4 w-4" /> Missing Records (CSV)
                 </Link>
               </Button>
             </CardContent>
