@@ -1,6 +1,8 @@
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
+import Apple from "next-auth/providers/apple";
 import { compare } from "bcryptjs";
 
 function envEnabled(value: string | undefined, defaultValue: boolean): boolean {
@@ -34,6 +36,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     providers: [
+        Google,
+        Apple,
         Credentials({
             name: "Email & Password",
             credentials: {
