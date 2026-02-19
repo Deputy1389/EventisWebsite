@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     if (firmId) {
         try {
             const res = await fetch(`${apiUrl}/firms/${firmId}/matters`, {
-                next: { revalidate: 0 },
+                cache: "no-store",
             });
             if (res.ok) {
                 const matters = await res.json();
