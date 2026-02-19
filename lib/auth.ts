@@ -3,11 +3,21 @@ import { authConfig } from "./auth.config";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 
+function envEnabled(value: string | undefined, defaultValue: boolean): boolean {
+    if (value === undefined) return defaultValue;
+    return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}
+
+const allowDemoUsers = envEnabled(
+    process.env.AUTH_ALLOW_DEMO_USERS ?? process.env.NEXT_PUBLIC_AUTH_ALLOW_DEMO_USERS,
+    false
+);
+
 // Demo users
 const DEMO_USERS = [
     {
         id: "1",
-        email: "demo@eventis.ai",
+        email: "demo@ontarus.ai",
         name: "John Doe",
         // password: "eventis123"
         passwordHash:
@@ -31,6 +41,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
+                if (!allowDemoUsers) return null;
+
                 const email = credentials?.email as string | undefined;
                 const password = credentials?.password as string | undefined;
 

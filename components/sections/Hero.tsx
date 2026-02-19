@@ -15,7 +15,7 @@ export function Hero() {
                     Court-ready medical chronologies <span className="text-primary">in minutes.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                    Eventis turns medical record PDFs into a structured event graph, then generates chronologies, specials, and missing-records reports with citations back to the source page.
+                    Linecite turns medical record PDFs into a structured event graph, then generates chronologies, specials, and missing-records reports with citations back to the source page.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <Button size="lg" className="w-full sm:w-auto text-base px-8 py-6" asChild>

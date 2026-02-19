@@ -27,7 +27,7 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 font-bold text-xl text-primary">
           <Network className="h-6 w-6" />
-          <span>Eventis</span>
+          <span>Linecite</span>
         </Link>
 
         {/* Desktop Nav */}

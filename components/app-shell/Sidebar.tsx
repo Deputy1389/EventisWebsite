@@ -31,7 +31,7 @@ export function Sidebar() {
             <div className="h-16 flex items-center px-6 border-b">
                 <Link href="/" className="flex items-center space-x-2 font-bold text-xl text-primary">
                     <Network className="h-6 w-6" />
-                    <span>Eventis</span>
+                    <span>Linecite</span>
                 </Link>
             </div>
 

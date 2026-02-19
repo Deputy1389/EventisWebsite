@@ -20,8 +20,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eventis — Court-ready Medical Chronologies",
-  description: "Eventis turns medical record PDFs into a structured event graph, then generates chronologies, specials, and missing-records reports with citations.",
+  title: "Linecite by Ontarus — Court-ready Medical Chronologies",
+  description: "Linecite turns medical record PDFs into a structured event graph, then generates chronologies, specials, and missing-records reports with citations.",
 };
 
 export default function RootLayout({

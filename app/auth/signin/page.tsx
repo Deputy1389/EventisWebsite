@@ -10,6 +10,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 
+const showDemoHint = ["1", "true", "yes", "on"].includes(
+    (process.env.NEXT_PUBLIC_AUTH_ALLOW_DEMO_USERS ?? "false").toLowerCase()
+);
+
 function SignInForm() {
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get("callbackUrl") || "/app";
@@ -39,7 +43,7 @@ function SignInForm() {
                 <div className="text-center">
                     <Link href="/" className="inline-flex items-center space-x-2 font-bold text-2xl text-primary">
                         <Network className="h-8 w-8" />
-                        <span>Eventis</span>
+                        <span>Linecite</span>
                     </Link>
                     <p className="text-muted-foreground mt-2">Sign in to your workspace</p>
                 </div>
@@ -63,7 +67,7 @@ function SignInForm() {
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="demo@eventis.ai"
+                                    placeholder="demo@ontarus.ai"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -93,12 +97,13 @@ function SignInForm() {
                     </CardContent>
                 </Card>
 
-                {/* Demo credentials hint */}
-                <div className="rounded-lg border bg-muted/40 p-4 text-center text-sm text-muted-foreground">
-                    <p className="font-medium text-foreground mb-1">Demo Credentials</p>
-                    <p>Email: <code className="text-xs bg-muted px-1 py-0.5 rounded">demo@eventis.ai</code></p>
-                    <p>Password: <code className="text-xs bg-muted px-1 py-0.5 rounded">eventis123</code></p>
-                </div>
+                {showDemoHint && (
+                    <div className="rounded-lg border bg-muted/40 p-4 text-center text-sm text-muted-foreground">
+                        <p className="font-medium text-foreground mb-1">Demo Credentials</p>
+                        <p>Email: <code className="text-xs bg-muted px-1 py-0.5 rounded">demo@ontarus.ai</code></p>
+                        <p>Password: <code className="text-xs bg-muted px-1 py-0.5 rounded">eventis123</code></p>
+                    </div>
+                )}
 
                 <p className="text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
