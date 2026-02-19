@@ -4,21 +4,52 @@ import Link from "next/link";
 import { Plus, Clock, FileText, MoreVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { auth } from "@/lib/auth";
 
-const cases = [
+const mockCases = [
     { id: "CAS-24-101", name: "Smith v. State Farm", status: "Completed", updated: "2 mins ago", pages: 450 },
     { id: "CAS-24-102", name: "Doe v. Mercy Hospital", status: "Processing", updated: "15 mins ago", pages: 1200 },
     { id: "CAS-24-103", name: "Johnson MVA", status: "Needs Review", updated: "1 hour ago", pages: 85 },
-    { id: "CAS-24-098", name: "Estate of R. Williams", status: "Completed", updated: "1 day ago", pages: 2300 },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+    const session = await auth();
+    const firmId = session?.user?.firmId;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+    let cases = mockCases;
+    let isLive = false;
+
+    if (firmId) {
+        try {
+            const res = await fetch(`${apiUrl}/firms/${firmId}/matters`, {
+                next: { revalidate: 0 },
+            });
+            if (res.ok) {
+                const matters = await res.json();
+                cases = matters.map((m: any) => ({
+                    id: m.id.substring(0, 8).toUpperCase(),
+                    name: m.title,
+                    status: "Completed", // Mock status for now
+                    updated: new Date(m.created_at).toLocaleDateString(),
+                    pages: Math.floor(Math.random() * 500) + 50, // Mock pages for now
+                }));
+                isLive = true;
+            }
+        } catch (error) {
+            console.error("Failed to fetch matters from Citeline:", error);
+        }
+    }
+
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                    <p className="text-muted-foreground">Welcome back, John.</p>
+                    <p className="text-muted-foreground">
+                        Welcome back, {session?.user?.name || "User"}.
+                        {isLive ? " (Live data)" : " (Demo data)"}
+                    </p>
                 </div>
                 <Button asChild>
                     <Link href="/app/new-case">

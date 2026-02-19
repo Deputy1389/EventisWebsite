@@ -12,6 +12,7 @@ const DEMO_USERS = [
         // password: "eventis123"
         passwordHash:
             "$2b$10$ApC5UwkzStE20Rq70bVJieFCV93D7OpSgdC1qUS6sZkb4dQEzAgN.",
+        firmId: "7a8bf3ee1ebd48a78a42995491234ebf",
         firm: "Doe & Associates",
     },
 ];
@@ -39,7 +40,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 const isValid = await compare(password, user.passwordHash);
                 if (!isValid) return null;
 
-                return { id: user.id, email: user.email, name: user.name };
+                return {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    firmId: user.firmId,
+                };
             },
         }),
     ],

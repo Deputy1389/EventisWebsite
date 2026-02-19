@@ -10,13 +10,15 @@ export const authConfig = {
     callbacks: {
         async jwt({ token, user }) {
             if (user) {
-                token.id = user.id;
+                token.id = user.id as string;
+                token.firmId = user.firmId as string;
             }
             return token;
         },
         async session({ session, token }) {
-            if (session.user && token.id) {
+            if (session.user) {
                 session.user.id = token.id as string;
+                session.user.firmId = token.firmId as string;
             }
             return session;
         },
