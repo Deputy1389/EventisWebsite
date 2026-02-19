@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Clock, ChevronLeft, ExternalLink } from "lucide-react";
+import { FileText, Clock, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, use } from "react";
 import { useSession } from "next-auth/react";

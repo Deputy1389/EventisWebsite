@@ -8,6 +8,7 @@ import { MoreVertical, Search, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 
 type Matter = {
   id: string;

@@ -14,7 +14,16 @@ type Matter = {
   created_at: string;
 };
 
-const mockCases = [
+type Case = {
+  id: string;
+  displayId?: string;
+  name: string;
+  status: string;
+  updated: string;
+  pages: number;
+};
+
+const mockCases: Case[] = [
   { id: "CAS-24-101", name: "Smith v. State Farm", status: "Completed", updated: "2 mins ago", pages: 450 },
   { id: "CAS-24-102", name: "Doe v. Mercy Hospital", status: "Processing", updated: "15 mins ago", pages: 1200 },
   { id: "CAS-24-103", name: "Johnson MVA", status: "Needs Review", updated: "1 hour ago", pages: 85 },
@@ -25,7 +34,7 @@ export default async function DashboardPage() {
   const firmId = session?.user?.firmId;
   const apiUrl = getServerApiUrl();
 
-  let cases = mockCases;
+  let cases: Case[] = mockCases;
   let isLive = false;
 
   if (firmId) {
@@ -121,7 +130,7 @@ export default async function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cases.map((c: any) => (
+              {cases.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">
                     <Link href={`/app/cases/${c.id}`} className="hover:underline">{c.name}</Link>
