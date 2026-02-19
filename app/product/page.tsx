@@ -8,7 +8,7 @@ export default function ProductPage() {
             <div className="container mx-auto px-4">
                 {/* Header */}
                 <div className="text-center mb-20">
-                    <h1 className="text-4xl font-bold tracking-tight mb-6">The Eventis Workflow</h1>
+                    <h1 className="text-4xl font-bold tracking-tight mb-6">The Linecite Workflow</h1>
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                         From raw PDF dump to court-ready exhibit in four audible steps.
                     </p>
@@ -31,7 +31,7 @@ export default function ProductPage() {
                             <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-4">1</div>
                             <h2 className="text-3xl font-bold mb-4">Create Case & Upload</h2>
                             <p className="text-lg text-muted-foreground mb-6">
-                                Drag and drop gigabytes of medical records. Eventis handles disorganized, scanned, and non-OCR'd PDFs with ease. We automatically index and order documents by date.
+                                Drag and drop gigabytes of medical records. Linecite handles disorganized, scanned, and non-OCR&apos;d PDFs with ease. We automatically index and order documents by date.
                             </p>
                             <ul className="space-y-2">
                                 <li className="flex items-center text-sm"><CheckSquare className="h-4 w-4 mr-2 text-primary" /> Supports 5,000+ pages per case</li>
@@ -46,7 +46,7 @@ export default function ProductPage() {
                             <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-4">2</div>
                             <h2 className="text-3xl font-bold mb-4">Ontology Extraction</h2>
                             <p className="text-lg text-muted-foreground mb-6">
-                                Unlike generic AI summarizers, Eventis maps records to a strict legal-medical ontology. We identify Providers, Visits, Procedures, and Billing Items as distinct entities.
+                                Unlike generic AI summarizers, Linecite maps records to a strict legal-medical ontology. We identify Providers, Visits, Procedures, and Billing Items as distinct entities.
                             </p>
                         </div>
                         <div className="flex-1">
@@ -73,7 +73,7 @@ export default function ProductPage() {
                             <div className="h-10 w-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold mb-4">3</div>
                             <h2 className="text-3xl font-bold mb-4">Review & Flagging</h2>
                             <p className="text-lg text-muted-foreground mb-6">
-                                We don't hide ambiguity. If a date is illegible or a provider is unclear, Eventis flags it as "Needs Review" so your paralegal can verify it instantly against the source page.
+                                We don&apos;t hide ambiguity. If a date is illegible or a provider is unclear, Linecite flags it as &quot;Needs Review&quot; so your paralegal can verify it instantly against the source page.
                             </p>
                         </div>
                     </div>
@@ -112,7 +112,7 @@ export default function ProductPage() {
                         </div>
                         <div className="p-6 bg-background rounded-xl shadow-sm">
                             <h3 className="font-bold text-lg mb-2">No Hallucinations</h3>
-                            <p className="text-sm text-muted-foreground">We extract what's there. We don't invent narrative. Facts only.</p>
+                            <p className="text-sm text-muted-foreground">We extract what&apos;s there. We don&apos;t invent narrative. Facts only.</p>
                         </div>
                     </div>
                     <div className="mt-12">

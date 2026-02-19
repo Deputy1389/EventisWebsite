@@ -12,7 +12,7 @@ export default function TechPage() {
                 <div className="text-center mb-16">
                     <h1 className="text-4xl font-bold tracking-tight mb-6">Not a Chatbot. An Ontology Engine.</h1>
                     <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                        LLMs are great at writing poetry. They are terrible at legal accuracy. Eventis uses a graph-based ontology to ensure every fact is traceable.
+                        LLMs are great at writing poetry. They are terrible at legal accuracy. Linecite uses a graph-based ontology to ensure every fact is traceable.
                     </p>
                 </div>
 
@@ -51,7 +51,7 @@ export default function TechPage() {
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 to-transparent -z-0" />
                     </div>
                     <p className="text-center text-sm text-muted-foreground mt-4">
-                        Simplified view of the Eventis Extraction Pipeline
+                        Simplified view of the Linecite Extraction Pipeline
                     </p>
                 </div>
 
@@ -60,16 +60,16 @@ export default function TechPage() {
                     <div>
                         <h3 className="text-2xl font-bold mb-4">The Ontology Model</h3>
                         <p className="text-muted-foreground mb-4 leading-relaxed">
-                            Eventis models each case as a knowledge graph consisting of <strong>Documents</strong>, <strong>Pages</strong>, <strong>Events</strong>, <strong>Providers</strong>, and <strong>Billing Records</strong>.
+                            Linecite models each case as a knowledge graph consisting of <strong>Documents</strong>, <strong>Pages</strong>, <strong>Events</strong>, <strong>Providers</strong>, and <strong>Billing Records</strong>.
                         </p>
                         <p className="text-muted-foreground leading-relaxed">
-                            A "Chronology" is simply a projection of this graph: we sort Events by date and render them. This means we can re-project the same data into a "Specials Summary" or a "Provider List" without re-reading the documents.
+                            A &quot;Chronology&quot; is simply a projection of this graph: we sort Events by date and render them. This means we can re-project the same data into a &quot;Specials Summary&quot; or a &quot;Provider List&quot; without re-reading the documents.
                         </p>
                     </div>
                     <div>
                         <h3 className="text-2xl font-bold mb-4">Missing Record Detection</h3>
                         <p className="text-muted-foreground mb-4 leading-relaxed">
-                            Because we understand the graph, we can find holes in it. If we see a "Referral to Dr. Smith" event on Jan 1st, but no records from Dr. Smith, our graph algorithms flag a "Missing Record" gap.
+                            Because we understand the graph, we can find holes in it. If we see a &quot;Referral to Dr. Smith&quot; event on Jan 1st, but no records from Dr. Smith, our graph algorithms flag a &quot;Missing Record&quot; gap.
                         </p>
                         <p className="text-muted-foreground leading-relaxed">
                             This is impossible for standard LLM summarizers, which only look at the text in front of them.

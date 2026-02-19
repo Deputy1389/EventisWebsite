@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, Calculator, FileWarning } from "lucide-react";
+import { FileText, Calculator, FileWarning } from "lucide-react";
 import Link from "next/link";
 
 const mockChronology = [
@@ -19,7 +19,7 @@ export default function SamplePage() {
                 <div className="text-center mb-16">
                     <h1 className="text-4xl font-bold tracking-tight mb-6">See the Output</h1>
                     <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                        Eventis produces structured, audit-ready reports. Here is a preview of the Medical Chronology format.
+                        Linecite produces structured, audit-ready reports. Here is a preview of the Medical Chronology format.
                     </p>
                 </div>
 

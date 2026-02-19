@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -33,6 +34,7 @@ export default function PilotPage() {
             setIsSuccess(true);
             toast.success("Request received! We'll be in touch shortly.");
         } catch (error) {
+            console.error(error);
             toast.error("Something went wrong. Please try again.");
         } finally {
             setIsSubmitting(false);
@@ -49,10 +51,10 @@ export default function PilotPage() {
                         </div>
                         <h2 className="text-2xl font-bold mb-2">Request Received</h2>
                         <p className="text-muted-foreground mb-6">
-                            Thanks for your interest in Eventis. Our onboarding team will email you within 24 hours to schedule your pilot setup.
+                            Thanks for your interest in Linecite. Our onboarding team will email you within 24 hours to schedule your pilot setup.
                         </p>
                         <Button asChild variant="outline">
-                            <a href="/">Return Home</a>
+                            <Link href="/">Return Home</Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -73,7 +75,7 @@ export default function PilotPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Contact Information</CardTitle>
-                        <CardDescription>We'll use this to set up your secure workspace.</CardDescription>
+                        <CardDescription>We&apos;ll use this to set up your secure workspace.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">

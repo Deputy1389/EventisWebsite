@@ -22,14 +22,14 @@ export function WhyLinecite() {
                             <Search className="h-6 w-6" />
                         </div>
                         <h3 className="text-xl font-bold mb-2">Deterministic Extraction</h3>
-                        <p className="text-muted-foreground">We don't summarize loosely. Our engine extracts structured data points deterministically, ensuring fidelity to the record.</p>
+                        <p className="text-muted-foreground">We don&apos;t summarize loosely. Our engine extracts structured data points deterministically, ensuring fidelity to the record.</p>
                     </div>
                     <div className="flex flex-col items-start">
                         <div className="p-3 rounded-lg bg-primary/10 text-primary mb-4">
                             <ShieldCheck className="h-6 w-6" />
                         </div>
                         <h3 className="text-xl font-bold mb-2">Audit Trail</h3>
-                        <p className="text-muted-foreground">Confidence scores for every extraction and "Needs Review" flags for ambiguous items ensure you are always in control.</p>
+                        <p className="text-muted-foreground">Confidence scores for every extraction and &quot;Needs Review&quot; flags for ambiguous items ensure you are always in control.</p>
                     </div>
                 </div>
             </div>
