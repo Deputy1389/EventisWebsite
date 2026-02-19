@@ -43,18 +43,29 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const formData = await request.formData();
   const apiUrl = getServerApiUrl();
-  const res = await fetch(`${apiUrl}/matters/${matterId}/documents`, {
-    method: "POST",
-    headers: withServerAuthHeaders(undefined, {
-      userId: session.user.id,
-      firmId: session.user.firmId,
-    }, "POST", `/matters/${matterId}/documents`),
-    body: formData,
-  });
+  console.log(`Uploading to Citeline: ${apiUrl}/matters/${matterId}/documents`);
+  
+  try {
+    const res = await fetch(`${apiUrl}/matters/${matterId}/documents`, {
+      method: "POST",
+      headers: withServerAuthHeaders(undefined, {
+        userId: session.user.id,
+        firmId: session.user.firmId,
+      }, "POST", `/matters/${matterId}/documents`),
+      body: formData,
+    });
 
-  const text = await res.text();
-  return new NextResponse(text, {
-    status: res.status,
-    headers: { "Content-Type": res.headers.get("Content-Type") || "application/json" },
-  });
+    if (!res.ok) {
+      console.error(`Citeline upload failed with status ${res.status}:`, await res.text());
+    }
+
+    const text = await res.text();
+    return new NextResponse(text, {
+      status: res.status,
+      headers: { "Content-Type": res.headers.get("Content-Type") || "application/json" },
+    });
+  } catch (error) {
+    console.error("Error connecting to Citeline backend:", error);
+    return NextResponse.json({ error: "Failed to connect to backend" }, { status: 502 });
+  }
 }
