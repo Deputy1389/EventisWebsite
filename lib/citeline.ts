@@ -5,7 +5,11 @@ export function getClientApiUrl(): string {
 }
 
 export function getServerApiUrl(): string {
-  return process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
+  const url = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
+  console.log(`[getServerApiUrl] process.env.API_URL: ${process.env.API_URL}`);
+  console.log(`[getServerApiUrl] process.env.NEXT_PUBLIC_API_URL: ${process.env.NEXT_PUBLIC_API_URL}`);
+  console.log(`[getServerApiUrl] resolved URL: ${url}`);
+  return url;
 }
 
 export function isHipaaEnforcementEnabled(): boolean {
