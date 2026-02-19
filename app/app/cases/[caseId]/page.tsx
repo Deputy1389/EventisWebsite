@@ -31,6 +31,13 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
 
   const latestSuccessRun = runs.find(r => r.status === "success");
 
+  function handleDownload(type: string) {
+    if (!latestSuccessRun) return;
+    const url = `/api/citeline/runs/${latestSuccessRun.id}/artifacts/${type}`;
+    console.log(`Downloading ${type} from ${url}`);
+    window.open(url, "_blank");
+  }
+
   useEffect(() => {
     async function fetchData() {
       if (!session?.user?.firmId) return;
@@ -118,10 +125,12 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                     </TableCell>
                     <TableCell className="text-right">
                       {run.status === "success" ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/api/citeline/runs/${run.id}/artifacts/json`} target="_blank">
-                            View Results
-                          </Link>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => window.open(`/api/citeline/runs/${run.id}/artifacts/json`, "_blank")}
+                        >
+                          View Results
                         </Button>
                       ) : (
                         <Clock className="h-4 w-4 ml-auto text-muted-foreground" />
@@ -143,32 +152,26 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 
-                asChild
                 disabled={!latestSuccessRun}
+                onClick={() => handleDownload("pdf")}
               >
-                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/pdf` : "#"} target="_blank">
-                  <FileText className="mr-2 h-4 w-4" /> Medical Chronology (PDF)
-                </Link>
+                <FileText className="mr-2 h-4 w-4" /> Medical Chronology (PDF)
               </Button>
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 
-                asChild
                 disabled={!latestSuccessRun}
+                onClick={() => handleDownload("specials_summary_pdf")}
               >
-                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/specials_summary_pdf` : "#"} target="_blank">
-                  <FileText className="mr-2 h-4 w-4" /> Specials Summary (PDF)
-                </Link>
+                <FileText className="mr-2 h-4 w-4" /> Specials Summary (PDF)
               </Button>
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 
-                asChild
                 disabled={!latestSuccessRun}
+                onClick={() => handleDownload("missing_records_csv")}
               >
-                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/missing_records_csv` : "#"} target="_blank">
-                  <FileText className="mr-2 h-4 w-4" /> Missing Records (CSV)
-                </Link>
+                <FileText className="mr-2 h-4 w-4" /> Missing Records (CSV)
               </Button>
             </CardContent>
           </Card>
