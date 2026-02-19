@@ -5,20 +5,83 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, Loader2, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 export default function NewCasePage() {
+    const { data: session } = useSession();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isDone, setIsDone] = useState(false);
+    const [caseName, setCaseName] = useState("");
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Mock processing simulation
-    function handleUpload() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+    async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!caseName) {
+            toast.error("Please enter a case name first");
+            return;
+        }
+
+        const firmId = session?.user?.firmId;
+        if (!firmId) {
+            toast.error("You must be logged in with a firm to create a case");
+            return;
+        }
+
         setIsProcessing(true);
-        setTimeout(() => {
-            setIsProcessing(false);
+
+        try {
+            // 1. Create the matter in Citeline
+            const matterRes = await fetch(`${apiUrl}/firms/${firmId}/matters`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: caseName }),
+            });
+
+            if (!matterRes.ok) {
+                const error = await matterRes.text();
+                throw new Error(`Failed to create matter: ${error}`);
+            }
+
+            const matter = await matterRes.json();
+            const matterId = matter.id;
+
+            // 2. Upload the file to the new matter
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const uploadRes = await fetch(`${apiUrl}/matters/${matterId}/documents`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!uploadRes.ok) {
+                const error = await uploadRes.text();
+                throw new Error(`Failed to upload document: ${error}`);
+            }
+
             setIsDone(true);
-        }, 2000);
+            toast.success("Case created and file uploaded!");
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            toast.error(error.message || "Something went wrong during upload");
+        } finally {
+            setIsProcessing(false);
+        }
+    }
+
+    function triggerFileSelect() {
+        if (!caseName) {
+            toast.error("Please enter a case name first");
+            return;
+        }
+        fileInputRef.current?.click();
     }
 
     if (isDone) {
@@ -29,7 +92,7 @@ export default function NewCasePage() {
                 </div>
                 <h2 className="text-3xl font-bold mb-4">Upload Complete</h2>
                 <p className="text-muted-foreground mb-8">
-                    "Doe v. Smith" is now being processed. You will receive an email when the logs are ready (est. 15 mins).
+                    "{caseName}" has been created and your records are uploaded.
                 </p>
                 <Button asChild>
                     <Link href="/app">Back to Dashboard</Link>
@@ -53,10 +116,26 @@ export default function NewCasePage() {
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="caseName">Case Name / Matter Reference</Label>
-                        <Input id="caseName" placeholder="e.g. Doe v. Smith" />
+                        <Input
+                            id="caseName"
+                            placeholder="e.g. Doe v. Smith"
+                            value={caseName}
+                            onChange={(e) => setCaseName(e.target.value)}
+                        />
                     </div>
 
-                    <div className="border-2 border-dashed rounded-lg p-12 text-center hover:bg-muted/50 transition-colors cursor-pointer" onClick={handleUpload}>
+                    <input
+                        type="file"
+                        className="hidden"
+                        ref={fileInputRef}
+                        accept=".pdf"
+                        onChange={handleFileChange}
+                    />
+
+                    <div
+                        className="border-2 border-dashed rounded-lg p-12 text-center hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={triggerFileSelect}
+                    >
                         {isProcessing ? (
                             <div className="flex flex-col items-center">
                                 <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -69,8 +148,8 @@ export default function NewCasePage() {
                                     <Upload className="h-6 w-6" />
                                 </div>
                                 <h3 className="text-lg font-medium mb-1">Upload Medical Records</h3>
-                                <p className="text-sm text-muted-foreground mb-4">PDF, ZIP, or folders supported.</p>
-                                <Button variant="secondary">Select Files</Button>
+                                <p className="text-sm text-muted-foreground mb-4">PDF files supported.</p>
+                                <Button variant="secondary" type="button">Select PDF File</Button>
                             </div>
                         )}
                     </div>
