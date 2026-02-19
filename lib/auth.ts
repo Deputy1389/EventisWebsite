@@ -23,7 +23,7 @@ const DEMO_USERS = [
         name: "John Doe",
         // password: "eventis123"
         passwordHash:
-            "$2b$10$ApC5UwkzStE20Rq70bVJieFCV93D7OpSgdC1qUS6sZkb4dQEzAgN.",
+            "$2b$10$3CuQgIJ6s3aX0Sd66CBgaempmxD3J5aDI8ZDx7YzGWrgEAIEMLo6i",
         firmId: "7a8bf3ee1ebd48a78a42995491234ebf",
         firm: "Doe & Associates",
     },
