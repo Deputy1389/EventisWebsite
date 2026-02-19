@@ -11,10 +11,11 @@ function b64url(input: Buffer | string): string {
     .replace(/=+$/g, "");
 }
 
-function signInternalJwt(identity: { userId: string; firmId: string }, method: string, path: string): string {
+function signInternalJwt(identity: { userId: string; firmId: string }, method: string, path: string): string | null {
   const secret = process.env.API_INTERNAL_JWT_SECRET?.trim();
   if (!secret || secret.length < 32) {
-    throw new Error("API_INTERNAL_JWT_SECRET must be set (>=32 chars) for server-to-server auth");
+    console.warn("API_INTERNAL_JWT_SECRET not set or too short; skipping server-to-server JWT signing");
+    return null;
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -56,13 +57,18 @@ export function withServerAuthHeaders(
     headers.set("X-Firm-Id", identity.firmId);
   }
 
+  // Bypass ngrok browser warning for automated fetch
+  headers.set("ngrok-skip-browser-warning", "true");
+
   if (identity.userId && identity.firmId) {
     const token = signInternalJwt(
       { userId: identity.userId, firmId: identity.firmId },
       method,
       path
     );
-    headers.set("X-Internal-Auth", `Bearer ${token}`);
+    if (token) {
+      headers.set("X-Internal-Auth", `Bearer ${token}`);
+    }
   }
 
   return headers;
