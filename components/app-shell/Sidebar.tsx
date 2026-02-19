@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Network, LayoutDashboard, FolderOpen, Upload, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -28,11 +29,12 @@ export function Sidebar() {
 
     return (
         <div className="w-64 border-r bg-muted/20 flex flex-col h-screen sticky top-0">
-            <div className="h-16 flex items-center px-6 border-b">
+            <div className="h-16 flex items-center justify-between px-6 border-b">
                 <Link href="/" className="flex items-center space-x-2 font-bold text-xl text-primary">
                     <Network className="h-6 w-6" />
                     <span>Linecite</span>
                 </Link>
+                <ThemeToggle />
             </div>
 
             <div className="flex-1 py-6 px-4 space-y-1">

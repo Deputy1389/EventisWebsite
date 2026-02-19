@@ -7,6 +7,7 @@ import { Network, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./ThemeToggle";
 
 const links = [
   { href: "/product", label: "Product" },
@@ -44,6 +45,7 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <ThemeToggle />
           <Button variant="outline" asChild>
             <Link href="/auth/signin">Sign In</Link>
           </Button>
@@ -63,6 +65,10 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right">
               <div className="flex flex-col space-y-4 mt-8">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Theme</span>
+                  <ThemeToggle />
+                </div>
                 {links.map((link) => (
                   <Link
                     key={link.href}
