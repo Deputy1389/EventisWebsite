@@ -91,7 +91,9 @@ export default function AllCasesPage() {
                   <TableCell className="font-medium">
                     <div className="flex items-center">
                       <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{m.title}</span>
+                      <Link href={`/app/cases/${m.id}`} className="hover:underline">
+                        {m.title}
+                      </Link>
                     </div>
                     <div className="text-xs text-muted-foreground ml-6">{m.id.substring(0, 8).toUpperCase()}</div>
                   </TableCell>

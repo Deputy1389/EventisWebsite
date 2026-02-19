@@ -40,7 +40,8 @@ export default async function DashboardPage() {
       if (res.ok) {
         const matters: Matter[] = await res.json();
         cases = matters.map((m) => ({
-          id: m.id.substring(0, 8).toUpperCase(),
+          id: m.id,
+          displayId: m.id.substring(0, 8).toUpperCase(),
           name: m.title,
           status: "Completed",
           updated: new Date(m.created_at).toLocaleDateString(),
@@ -120,11 +121,11 @@ export default async function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cases.map((c) => (
+              {cases.map((c: any) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">
-                    <Link href="#" className="hover:underline">{c.name}</Link>
-                    <div className="text-xs text-muted-foreground">{c.id}</div>
+                    <Link href={`/app/cases/${c.id}`} className="hover:underline">{c.name}</Link>
+                    <div className="text-xs text-muted-foreground">{c.displayId || c.id}</div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={c.status === "Completed" ? "default" : c.status === "Processing" ? "secondary" : "destructive"}>
