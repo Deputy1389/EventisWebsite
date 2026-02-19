@@ -37,6 +37,7 @@ export async function GET(_: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
+  console.log(">>> POST /api/citeline/firms/[firmId]/matters ROUTE HIT");
   const session = await auth();
   const { firmId } = await params;
 
