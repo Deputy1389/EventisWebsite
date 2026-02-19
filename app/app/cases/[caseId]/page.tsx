@@ -29,6 +29,8 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   const [runs, setRuns] = useState<Run[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const latestSuccessRun = runs.find(r => r.status === "success");
+
   useEffect(() => {
     async function fetchData() {
       if (!session?.user?.firmId) return;
@@ -136,14 +138,35 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               <CardTitle className="text-lg">Reports</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full justify-start" variant="outline" disabled={runs.every(r => r.status !== "success")}>
-                <FileText className="mr-2 h-4 w-4" /> Medical Chronology (DOCX)
+              <Button 
+                className="w-full justify-start" 
+                variant="outline" 
+                asChild
+                disabled={!latestSuccessRun}
+              >
+                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/json` : "#"} target="_blank">
+                  <FileText className="mr-2 h-4 w-4" /> Medical Chronology (JSON)
+                </Link>
               </Button>
-              <Button className="w-full justify-start" variant="outline" disabled={runs.every(r => r.status !== "success")}>
-                <FileText className="mr-2 h-4 w-4" /> Specials Summary (PDF)
+              <Button 
+                className="w-full justify-start" 
+                variant="outline" 
+                asChild
+                disabled={!latestSuccessRun}
+              >
+                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/csv` : "#"} target="_blank">
+                  <FileText className="mr-2 h-4 w-4" /> Provider List (CSV)
+                </Link>
               </Button>
-              <Button className="w-full justify-start" variant="outline" disabled={runs.every(r => r.status !== "success")}>
-                <FileText className="mr-2 h-4 w-4" /> Missing Records (PDF)
+              <Button 
+                className="w-full justify-start" 
+                variant="outline" 
+                asChild
+                disabled={!latestSuccessRun}
+              >
+                <Link href={latestSuccessRun ? `/api/citeline/runs/${latestSuccessRun.id}/artifacts/json` : "#"} target="_blank">
+                  <FileText className="mr-2 h-4 w-4" /> Missing Records (JSON)
+                </Link>
               </Button>
             </CardContent>
           </Card>

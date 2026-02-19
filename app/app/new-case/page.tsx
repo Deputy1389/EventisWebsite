@@ -8,6 +8,7 @@ import { Upload, Loader2, CheckCircle2 } from "lucide-react";
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 type CreatedMatter = {
@@ -15,10 +16,12 @@ type CreatedMatter = {
 };
 
 export default function NewCasePage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [caseName, setCaseName] = useState("");
+  const [newCaseId, setNewCaseId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -52,6 +55,7 @@ export default function NewCasePage() {
 
       const matter: CreatedMatter = await matterRes.json();
       const matterId = matter.id;
+      setNewCaseId(matterId);
 
       const formData = new FormData();
       formData.append("file", file);
@@ -68,6 +72,11 @@ export default function NewCasePage() {
 
       setIsDone(true);
       toast.success("Case created and file uploaded!");
+      
+      // Auto-redirect after a short delay
+      setTimeout(() => {
+        router.push(`/app/cases/${matterId}`);
+      }, 2000);
     } catch (error: unknown) {
       console.error("Upload error:", error);
       const message = error instanceof Error ? error.message : "Something went wrong during upload";
@@ -94,10 +103,16 @@ export default function NewCasePage() {
         <h2 className="text-3xl font-bold mb-4">Upload Complete</h2>
         <p className="text-muted-foreground mb-8">
           &ldquo;{caseName}&rdquo; has been created and your records are uploaded.
+          <br />Redirecting you to case details...
         </p>
-        <Button asChild>
-          <Link href="/app">Back to Dashboard</Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Button asChild>
+            <Link href={`/app/cases/${newCaseId}`}>View Case Details</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/app">Back to Dashboard</Link>
+          </Button>
+        </div>
       </div>
     );
   }
