@@ -59,8 +59,15 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
       });
 
       if (res.ok) {
-        toast.success("Document uploaded successfully! Processing will start shortly.");
-        // Refresh runs to show new pending run if backend auto-triggers
+        toast.success("Document uploaded successfully! Starting extraction...");
+        
+        // Trigger extraction run
+        await fetch(`/api/citeline/matters/${caseId}/runs`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+
+        // Refresh runs
         fetchData();
       } else {
         toast.error("Failed to upload document.");
@@ -96,7 +103,17 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
 
   useEffect(() => {
     fetchData();
-  }, [session, caseId]);
+
+    // Poll for updates if there are active runs
+    const interval = setInterval(() => {
+      const hasActiveRuns = runs.some(r => r.status === "pending" || r.status === "running");
+      if (hasActiveRuns || runs.length === 0) {
+        fetchData();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [session, caseId, runs.length]); // Added runs.length to re-calc interval if needed
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-[60vh]">Loading case details...</div>;

@@ -70,6 +70,18 @@ export default function NewCasePage() {
         throw new Error(`Failed to upload document: ${error}`);
       }
 
+      // 3. Trigger extraction run
+      console.log("Triggering extraction run...");
+      const runRes = await fetch(`/api/citeline/matters/${matterId}/runs`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      if (!runRes.ok) {
+        console.error("Failed to trigger extraction:", await runRes.text());
+        // We don't throw here so the user at least sees the upload worked
+      }
+
       setIsDone(true);
       toast.success("Case created and file uploaded!");
       
