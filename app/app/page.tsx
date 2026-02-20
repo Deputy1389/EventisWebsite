@@ -1,12 +1,22 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
-import { Plus, Clock, FileText, MoreVertical } from "lucide-react";
+import { Plus, Clock, FileText, MoreVertical, ExternalLink, Trash2, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { auth } from "@/lib/auth";
-import { getServerApiUrl } from "@/lib/citeline";
-import { withServerAuthHeaders } from "@/lib/citeline-server";
+import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 type Matter = {
   id: string;
@@ -23,32 +33,23 @@ type Case = {
   pages: number;
 };
 
-const mockCases: Case[] = [
-  { id: "CAS-24-101", name: "Smith v. State Farm", status: "Completed", updated: "2 mins ago", pages: 450 },
-  { id: "CAS-24-102", name: "Doe v. Mercy Hospital", status: "Processing", updated: "15 mins ago", pages: 1200 },
-  { id: "CAS-24-103", name: "Johnson MVA", status: "Needs Review", updated: "1 hour ago", pages: 85 },
-];
+export default function DashboardPage() {
+  const { data: session } = useSession();
+  const [cases, setCases] = useState<Case[]>([]);
+  const [isLive, setIsLive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-export default async function DashboardPage() {
-  const session = await auth();
-  const firmId = session?.user?.firmId;
-  const apiUrl = getServerApiUrl();
+  async function fetchMatters() {
+    const firmId = session?.user?.firmId;
+    if (!firmId) return;
 
-  let cases: Case[] = mockCases;
-  let isLive = false;
-
-  if (firmId) {
     try {
-      const res = await fetch(`${apiUrl}/firms/${firmId}/matters`, {
+      const res = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         cache: "no-store",
-        headers: withServerAuthHeaders(undefined, {
-          userId: session?.user?.id,
-          firmId,
-        }, "GET", `/firms/${firmId}/matters`),
       });
       if (res.ok) {
         const matters: Matter[] = await res.json();
-        cases = matters.map((m) => ({
+        const mappedCases = matters.map((m) => ({
           id: m.id,
           displayId: m.id.substring(0, 8).toUpperCase(),
           name: m.title,
@@ -56,12 +57,37 @@ export default async function DashboardPage() {
           updated: new Date(m.created_at).toLocaleDateString(),
           pages: Math.floor(Math.random() * 500) + 50,
         }));
-        isLive = true;
+        setCases(mappedCases);
+        setIsLive(true);
       }
     } catch (error) {
       console.error("Failed to fetch matters from Citeline:", error);
+    } finally {
+      setIsLoading(false);
     }
   }
+
+  async function handleDelete(caseId: string) {
+    if (!confirm("Are you sure you want to delete this case?")) return;
+
+    try {
+      const res = await fetch(`/api/citeline/matters/${caseId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("Case deleted successfully");
+        setCases(prev => prev.filter(c => c.id !== caseId));
+      } else {
+        toast.error("Failed to delete case");
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting");
+    }
+  }
+
+  useEffect(() => {
+    fetchMatters();
+  }, [session]);
 
   return (
     <div className="space-y-8">
@@ -144,9 +170,32 @@ export default async function DashboardPage() {
                   <TableCell>{c.pages}</TableCell>
                   <TableCell>{c.updated}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link href={`/app/cases/${c.id}`}>
+                            <ExternalLink className="mr-2 h-4 w-4" /> Open Case
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${c.id}`, "_blank")}>
+                          <Download className="mr-2 h-4 w-4" /> Latest Report
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleDelete(c.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete Case
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
