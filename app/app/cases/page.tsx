@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { MoreVertical, Search, FileText, ExternalLink, Trash2, Download, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect, useCallback } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -30,6 +31,7 @@ export default function AllCasesPage() {
   const [matters, setMatters] = useState<Matter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
 
   const fetchMatters = useCallback(async () => {
     if (!session?.user?.firmId) return;
@@ -71,9 +73,28 @@ export default function AllCasesPage() {
     }
   }
 
-  const filteredMatters = matters.filter((m) =>
-    m.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const sortedAndFilteredMatters = useMemo(() => {
+    let result = matters.filter((m) =>
+      m.title.toLowerCase().includes(search.toLowerCase())
+    );
+
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "oldest":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "az":
+          return a.title.localeCompare(b.title);
+        case "za":
+          return b.title.localeCompare(a.title);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [matters, search, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -84,7 +105,7 @@ export default function AllCasesPage() {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -94,6 +115,17 @@ export default function AllCasesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">Newest First</SelectItem>
+            <SelectItem value="oldest">Oldest First</SelectItem>
+            <SelectItem value="az">Name (A-Z)</SelectItem>
+            <SelectItem value="za">Name (Z-A)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card className="shadow-sm border-none bg-transparent">
@@ -126,7 +158,7 @@ export default function AllCasesPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredMatters.map((m) => (
+              ) : sortedAndFilteredMatters.map((m) => (
                 <TableRow key={m.id} className="group hover:bg-muted/30 transition-colors">
                   <TableCell className="font-medium pl-6 py-4">
                     <div className="flex items-center">
