@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Clock, ChevronLeft, Upload, Loader2 } from "lucide-react";
+import { FileText, Clock, ChevronLeft, Upload, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, use, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 type Run = {
@@ -23,13 +24,23 @@ type Matter = {
   created_at: string;
 };
 
+type Document = {
+  id: string;
+  filename: string;
+  uploaded_at: string;
+  bytes: number;
+};
+
 export default function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
+  const router = useRouter();
   const { data: session } = useSession();
   const [matter, setMatter] = useState<Matter | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const latestSuccessRun = runs.find(r => r.status === "success");
@@ -42,6 +53,29 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     const url = `/api/citeline/runs/${latestSuccessRun.id}/artifacts/${type}`;
     console.log(`Downloading ${type} from ${url}`);
     window.open(url, "_blank");
+  }
+
+  async function handleDelete() {
+    if (!confirm("Are you sure you want to delete this case? This action cannot be undone.")) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/citeline/matters/${caseId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        toast.success("Case deleted successfully");
+        router.push("/app/cases");
+      } else {
+        toast.error("Failed to delete case");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -94,6 +128,12 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
       if (runsRes.ok) {
         setRuns(await runsRes.json());
       }
+
+      // Fetch Documents
+      const docsRes = await fetch(`/api/citeline/matters/${caseId}/documents`);
+      if (docsRes.ok) {
+        setDocuments(await docsRes.json());
+      }
     } catch (err) {
       console.error("Failed to fetch case data:", err);
     } finally {
@@ -145,9 +185,44 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Processing History</CardTitle>
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Source Documents</CardTitle>
+              <CardDescription>Files uploaded for this matter.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Filename</TableHead>
+                    <TableHead>Uploaded</TableHead>
+                    <TableHead className="text-right">Size</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {documents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">No documents uploaded.</TableCell>
+                    </TableRow>
+                  ) : documents.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium flex items-center">
+                        <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {doc.filename}
+                      </TableCell>
+                      <TableCell>{new Date(doc.uploaded_at).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">{(doc.bytes / 1024 / 1024).toFixed(2)} MB</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Processing History</CardTitle>
             <CardDescription>All extractions performed for this matter.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -195,6 +270,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
             </Table>
           </CardContent>
         </Card>
+        </div>
 
         <div className="space-y-6">
           <Card>
@@ -248,6 +324,18 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</>
                 ) : (
                   <><Upload className="mr-2 h-4 w-4" /> Upload More Documents</>
+                )}
+              </Button>
+              <Button 
+                className="w-full text-destructive hover:bg-destructive/10" 
+                variant="outline"
+                disabled={isDeleting}
+                onClick={handleDelete}
+              >
+                {isDeleting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+                ) : (
+                  <><Trash2 className="mr-2 h-4 w-4" /> Delete Case</>
                 )}
               </Button>
             </CardContent>
