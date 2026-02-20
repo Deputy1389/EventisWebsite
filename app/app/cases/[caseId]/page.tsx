@@ -16,6 +16,13 @@ type Run = {
   status: string;
   started_at: string | null;
   finished_at: string | null;
+  metrics?: {
+    pages_total?: number;
+    events_total?: number;
+    providers_detected?: number;
+    [key: string]: any;
+  } | null;
+  error_message?: string | null;
 };
 
 type Matter = {
