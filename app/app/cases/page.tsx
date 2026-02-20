@@ -74,7 +74,7 @@ export default function AllCasesPage() {
   }
 
   const sortedAndFilteredMatters = useMemo(() => {
-    let result = matters.filter((m) =>
+    const result = matters.filter((m) =>
       m.title.toLowerCase().includes(search.toLowerCase())
     );
 
