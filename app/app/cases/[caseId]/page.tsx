@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Clock, ChevronLeft } from "lucide-react";
+import { FileText, Clock, ChevronLeft, Upload, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
 type Run = {
   id: string;
@@ -28,37 +29,72 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   const [matter, setMatter] = useState<Matter | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const latestSuccessRun = runs.find(r => r.status === "success");
 
   function handleDownload(type: string) {
-    if (!latestSuccessRun) return;
+    if (!latestSuccessRun) {
+      toast.error("No successful extraction run found. Please wait for processing to complete.");
+      return;
+    }
     const url = `/api/citeline/runs/${latestSuccessRun.id}/artifacts/${type}`;
     console.log(`Downloading ${type} from ${url}`);
     window.open(url, "_blank");
   }
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!session?.user?.firmId) return;
-      try {
-        // Fetch Matter Details
-        const matterRes = await fetch(`/api/citeline/matters/${caseId}`);
-        if (matterRes.ok) {
-          setMatter(await matterRes.json());
-        }
+  async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-        // Fetch Runs for this Matter
-        const runsRes = await fetch(`/api/citeline/matters/${caseId}/runs`);
-        if (runsRes.ok) {
-          setRuns(await runsRes.json());
-        }
-      } catch (err) {
-        console.error("Failed to fetch case data:", err);
-      } finally {
-        setIsLoading(false);
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/citeline/matters/${caseId}/documents`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        toast.success("Document uploaded successfully! Processing will start shortly.");
+        // Refresh runs to show new pending run if backend auto-triggers
+        fetchData();
+      } else {
+        toast.error("Failed to upload document.");
       }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("An error occurred during upload.");
+    } finally {
+      setIsUploading(false);
     }
+  }
+
+  async function fetchData() {
+    if (!session?.user?.firmId) return;
+    try {
+      // Fetch Matter Details
+      const matterRes = await fetch(`/api/citeline/matters/${caseId}`);
+      if (matterRes.ok) {
+        setMatter(await matterRes.json());
+      }
+
+      // Fetch Runs for this Matter
+      const runsRes = await fetch(`/api/citeline/matters/${caseId}/runs`);
+      if (runsRes.ok) {
+        setRuns(await runsRes.json());
+      }
+    } catch (err) {
+      console.error("Failed to fetch case data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
     fetchData();
   }, [session, caseId]);
 
@@ -152,7 +188,6 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 
-                disabled={!latestSuccessRun}
                 onClick={() => handleDownload("pdf")}
               >
                 <FileText className="mr-2 h-4 w-4" /> Medical Chronology (PDF)
@@ -160,7 +195,6 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 
-                disabled={!latestSuccessRun}
                 onClick={() => handleDownload("specials_summary_pdf")}
               >
                 <FileText className="mr-2 h-4 w-4" /> Specials Summary (PDF)
@@ -168,7 +202,6 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               <Button 
                 className="w-full justify-start" 
                 variant="outline" 
-                disabled={!latestSuccessRun}
                 onClick={() => handleDownload("missing_records_csv")}
               >
                 <FileText className="mr-2 h-4 w-4" /> Missing Records (CSV)
@@ -181,11 +214,24 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full" variant="secondary">
-                Upload More Documents
-              </Button>
-              <Button className="w-full">
-                Trigger New Extraction
+              <input
+                type="file"
+                className="hidden"
+                ref={fileInputRef}
+                accept=".pdf"
+                onChange={handleFileUpload}
+              />
+              <Button 
+                className="w-full" 
+                variant="secondary"
+                disabled={isUploading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</>
+                ) : (
+                  <><Upload className="mr-2 h-4 w-4" /> Upload More Documents</>
+                )}
               </Button>
             </CardContent>
           </Card>
