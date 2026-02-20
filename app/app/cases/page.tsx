@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Search, FileText, ExternalLink, Trash2, Download } from "lucide-react";
+import { MoreVertical, Search, FileText, ExternalLink, Trash2, Download, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
@@ -96,65 +96,84 @@ export default function AllCasesPage() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      <Card className="shadow-sm border-none bg-transparent">
+        <CardContent className="p-0 border rounded-lg bg-background overflow-hidden">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead>Case Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="pl-6 h-10 text-[10px] uppercase tracking-wider">Case Name</TableHead>
+                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Status</TableHead>
+                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Created At</TableHead>
+                <TableHead className="text-right pr-6 h-10 text-[10px] uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10">Loading cases...</TableCell>
+                  <TableCell colSpan={4} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground tracking-tight">Accessing records...</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : filteredMatters.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">No cases found.</TableCell>
+                  <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="h-8 w-8 opacity-20" />
+                      <p>No cases found matching your search.</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : filteredMatters.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-medium">
+                <TableRow key={m.id} className="group hover:bg-muted/30 transition-colors">
+                  <TableCell className="font-medium pl-6 py-4">
                     <div className="flex items-center">
-                      <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <Link href={`/app/cases/${m.id}`} className="hover:underline">
+                      <FileText className="mr-2 h-4 w-4 text-muted-foreground opacity-50" />
+                      <Link href={`/app/cases/${m.id}`} className="hover:underline text-primary">
                         {m.title}
                       </Link>
                     </div>
-                    <div className="text-xs text-muted-foreground ml-6">{m.id.substring(0, 8).toUpperCase()}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5 ml-6 opacity-70">
+                      REF: {m.id.substring(0, 8).toUpperCase()}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge>Completed</Badge>
+                    <Badge variant="secondary" className="text-[10px] h-5 px-2 font-semibold">
+                      Completed
+                    </Badge>
                   </TableCell>
-                  <TableCell>{new Date(m.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-xs text-muted-foreground">
+                    {new Date(m.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel className="text-xs">Case Options</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
+                        <DropdownMenuItem asChild className="text-xs">
                           <Link href={`/app/cases/${m.id}`}>
-                            <ExternalLink className="mr-2 h-4 w-4" /> Open Case
+                            <ExternalLink className="mr-2 h-3.5 w-3.5" /> View Full File
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${m.id}`, "_blank")}>
-                          <Download className="mr-2 h-4 w-4" /> Latest Report
+                        <DropdownMenuItem 
+                          className="text-xs"
+                          onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${m.id}`, "_blank")}
+                        >
+                          <Download className="mr-2 h-3.5 w-3.5" /> Download Chronology
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
+                          className="text-destructive focus:text-destructive text-xs"
                           onClick={() => handleDelete(m.id)}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Case
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Archive Case
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
