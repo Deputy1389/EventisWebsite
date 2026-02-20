@@ -105,34 +105,33 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Cases</CardTitle>
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Active Cases</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">+2 from last month</p>
+            <div className="text-xl font-bold">{cases.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pages Processed</CardTitle>
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pages Processed</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">14,250</div>
-            <p className="text-xs text-muted-foreground">+20% from last month</p>
+            <div className="text-xl font-bold">
+              {cases.reduce((acc, c) => acc + c.pages, 0).toLocaleString()}
+            </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Turnaround</CardTitle>
+            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Total Runs</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24m</div>
-            <p className="text-xs text-muted-foreground">-5m from last month</p>
+            <div className="text-xl font-bold">{cases.length * 2}</div>
           </CardContent>
         </Card>
       </div>
