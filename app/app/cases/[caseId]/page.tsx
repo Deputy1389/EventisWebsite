@@ -20,7 +20,7 @@ type Run = {
     pages_total?: number;
     events_total?: number;
     providers_detected?: number;
-    [key: string]: any;
+    [key: string]: number | string | boolean | undefined | null | object;
   } | null;
   error_message?: string | null;
 };
