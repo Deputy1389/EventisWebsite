@@ -77,7 +77,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                 </Card>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Right: Document Viewer */}
