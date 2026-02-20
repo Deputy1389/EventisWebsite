@@ -88,108 +88,120 @@ export default function DashboardPage() {
   }, [fetchMatters]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">Command Center</h1>
+          <p className="text-sm text-muted-foreground">
             Welcome back, {session?.user?.name || "User"}.
-            {isLive ? " (Live data)" : " (Demo data)"}
           </p>
         </div>
-        <Button asChild>
+        <Button asChild size="sm">
           <Link href="/app/new-case">
             <Plus className="mr-2 h-4 w-4" /> New Case
           </Link>
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Active Cases</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{cases.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pages Processed</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">
-              {cases.reduce((acc, c) => acc + c.pages, 0).toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Total Runs</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{cases.length * 2}</div>
-          </CardContent>
-        </Card>
+      {/* Slim Banner Stats */}
+      <div className="flex items-center gap-8 py-3 px-6 bg-muted/30 border rounded-lg overflow-x-auto whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Matters:</span>
+          <span className="text-sm font-bold">{cases.length}</span>
+        </div>
+        <div className="h-4 w-px bg-border hidden sm:block" />
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pages Processed:</span>
+          <span className="text-sm font-bold">{cases.reduce((acc, c) => acc + c.pages, 0).toLocaleString()}</span>
+        </div>
+        <div className="h-4 w-px bg-border hidden sm:block" />
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Completed Runs:</span>
+          <span className="text-sm font-bold">{cases.length * 2}</span>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Cases</CardTitle>
-          <CardDescription>You have 3 cases processing or needing review.</CardDescription>
+      <Card className="shadow-sm border-none bg-transparent">
+        <CardHeader className="px-0 pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-semibold">Active Matters</CardTitle>
+              <CardDescription className="text-xs">
+                {isLive ? "Displaying live matter data from server." : "Displaying demonstration matters."}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 border rounded-lg bg-background overflow-hidden">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-muted/50">
               <TableRow>
-                <TableHead>Case Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Pages</TableHead>
-                <TableHead>Last Updated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="pl-6 h-10 text-[10px] uppercase tracking-wider">Matter Name</TableHead>
+                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Status</TableHead>
+                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Volume</TableHead>
+                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Last Activity</TableHead>
+                <TableHead className="text-right pr-6 h-10 text-[10px] uppercase tracking-wider">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cases.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">
-                    <Link href={`/app/cases/${c.id}`} className="hover:underline">{c.name}</Link>
-                    <div className="text-xs text-muted-foreground">{c.displayId || c.id}</div>
+              {cases.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <FileText className="h-8 w-8 opacity-20" />
+                      <p>No active matters found.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : cases.map((c) => (
+                <TableRow key={c.id} className="group hover:bg-muted/30 transition-colors">
+                  <TableCell className="font-medium pl-6 py-4">
+                    <Link href={`/app/cases/${c.id}`} className="hover:underline text-primary">
+                      {c.name}
+                    </Link>
+                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5 opacity-70">
+                      REF: {c.displayId || c.id.substring(0, 8).toUpperCase()}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={c.status === "Completed" ? "default" : c.status === "Processing" ? "secondary" : "destructive"}>
+                    <Badge 
+                      variant={c.status === "Completed" ? "default" : "secondary"} 
+                      className="text-[10px] h-5 px-2 font-semibold"
+                    >
                       {c.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{c.pages}</TableCell>
-                  <TableCell>{c.updated}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-xs text-muted-foreground">
+                    {c.pages} pages
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{c.updated}</TableCell>
+                  <TableCell className="text-right pr-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel className="text-xs">Matter Options</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
+                        <DropdownMenuItem asChild className="text-xs">
                           <Link href={`/app/cases/${c.id}`}>
-                            <ExternalLink className="mr-2 h-4 w-4" /> Open Case
+                            <ExternalLink className="mr-2 h-3.5 w-3.5" /> View Case File
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${c.id}`, "_blank")}>
-                          <Download className="mr-2 h-4 w-4" /> Latest Report
+                        <DropdownMenuItem 
+                          className="text-xs"
+                          onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${c.id}`, "_blank")}
+                        >
+                          <Download className="mr-2 h-3.5 w-3.5" /> Download Chronology
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
+                          className="text-destructive focus:text-destructive text-xs"
                           onClick={() => handleDelete(c.id)}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete Case
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Archive Matter
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
