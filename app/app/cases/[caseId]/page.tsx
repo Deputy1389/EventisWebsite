@@ -29,6 +29,7 @@ type Document = {
   filename: string;
   uploaded_at: string;
   bytes: number;
+  page_count?: number;
 };
 
 export default function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
@@ -44,6 +45,13 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const latestSuccessRun = runs.find(r => r.status === "success");
+  const activeRun = runs.find(r => r.status === "pending" || r.status === "running");
+
+  const metrics = latestSuccessRun?.metrics || {
+    pages_total: documents.reduce((acc, d) => acc + (d.page_count || 0), 0) || 0,
+    events_total: 0,
+    providers_detected: 0
+  };
 
   const fetchData = useCallback(async () => {
     if (!session?.user?.firmId) return;
@@ -184,6 +192,48 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
         </div>
       </div>
 
+      {/* Case Vitals Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 border rounded-xl">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Volume</p>
+          <p className="text-xl font-bold">{metrics.pages_total || documents.length} <span className="text-xs font-normal text-muted-foreground">Pages</span></p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Evidence</p>
+          <p className="text-xl font-bold">{metrics.events_total || 0} <span className="text-xs font-normal text-muted-foreground">Events</span></p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Providers</p>
+          <p className="text-xl font-bold">{metrics.providers_detected || 0} <span className="text-xs font-normal text-muted-foreground">Entities</span></p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ref ID</p>
+          <p className="text-sm font-mono mt-1 opacity-70">{caseId.substring(0, 12).toUpperCase()}</p>
+        </div>
+      </div>
+
+      {activeRun && (
+        <Card className="border-primary/20 bg-primary/5 animate-pulse">
+          <CardHeader className="py-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Active Extraction in Progress...
+              </CardTitle>
+              <Badge variant="outline" className="bg-background">Step 2 of 4</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <div className="flex gap-8 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+              <span className="text-primary">âœ“ OCR Processing</span>
+              <span className="text-primary animate-bounce">â–¶ Ontology Mapping</span>
+              <span>â—‹ Gap Detection</span>
+              <span>â—‹ Final Export</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-6">
           <Card>
@@ -256,9 +306,11 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          onClick={() => window.open(`/api/citeline/runs/${run.id}/artifacts/json`, "_blank")}
+                          asChild
                         >
-                          View Results
+                          <Link href={`/app/cases/${caseId}/review`}>
+                            View Results
+                          </Link>
                         </Button>
                       ) : (
                         <Clock className="h-4 w-4 ml-auto text-muted-foreground" />
