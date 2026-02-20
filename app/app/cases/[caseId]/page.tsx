@@ -73,6 +73,73 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   }, [session, caseId]);
 
   function handleDownload(type: string) {
+    if (!latestSuccessRun) {
+      toast.error("No successful extraction run found. Please wait for processing to complete.");
+      return;
+    }
+    const url = `/api/citeline/runs/${latestSuccessRun.id}/artifacts/${type}`;
+    console.log(`Downloading ${type} from ${url}`);
+    window.open(url, "_blank");
+  }
+
+  async function handleDelete() {
+    if (!confirm("Are you sure you want to delete this case? This action cannot be undone.")) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/citeline/matters/${caseId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        toast.success("Case deleted successfully");
+        router.push("/app/cases");
+      } else {
+        toast.error("Failed to delete case");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`/api/citeline/matters/${caseId}/documents`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        toast.success("Document uploaded successfully! Starting extraction...");
+        
+        // Trigger extraction run
+        await fetch(`/api/citeline/matters/${caseId}/runs`, {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+
+        // Refresh runs
+        fetchData();
+      } else {
+        toast.error("Failed to upload document.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("An error occurred during upload.");
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   useEffect(() => {
     fetchData();
