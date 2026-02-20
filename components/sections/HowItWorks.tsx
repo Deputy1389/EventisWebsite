@@ -1,5 +1,3 @@
-import { ArrowRight } from "lucide-react";
-
 export function HowItWorks() {
     return (
         <section className="py-20">

@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { MoreVertical, Search, FileText, ExternalLink, Trash2, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -31,25 +31,26 @@ export default function AllCasesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    async function fetchMatters() {
-      if (!session?.user?.firmId) return;
-      try {
-        const res = await fetch(`/api/citeline/firms/${session.user.firmId}/matters`, {
-          cache: "no-store",
-        });
-        if (res.ok) {
-          const data: Matter[] = await res.json();
-          setMatters(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch cases:", err);
-      } finally {
-        setIsLoading(false);
+  const fetchMatters = useCallback(async () => {
+    if (!session?.user?.firmId) return;
+    try {
+      const res = await fetch(`/api/citeline/firms/${session.user.firmId}/matters`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data: Matter[] = await res.json();
+        setMatters(data);
       }
+    } catch (err) {
+      console.error("Failed to fetch cases:", err);
+    } finally {
+      setIsLoading(false);
     }
-    fetchMatters();
   }, [session]);
+
+  useEffect(() => {
+    fetchMatters();
+  }, [fetchMatters]);
 
   async function handleDelete(caseId: string) {
     if (!confirm("Are you sure you want to delete this case?")) return;
@@ -65,6 +66,7 @@ export default function AllCasesPage() {
         toast.error("Failed to delete case");
       }
     } catch (error) {
+      console.error("Delete error:", error);
       toast.error("An error occurred while deleting");
     }
   }

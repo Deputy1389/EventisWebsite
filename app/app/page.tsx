@@ -7,7 +7,7 @@ import { Plus, Clock, FileText, MoreVertical, ExternalLink, Trash2, Download } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,9 +37,8 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [cases, setCases] = useState<Case[]>([]);
   const [isLive, setIsLive] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchMatters() {
+  const fetchMatters = useCallback(async () => {
     const firmId = session?.user?.firmId;
     if (!firmId) return;
 
@@ -62,10 +61,8 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error("Failed to fetch matters from Citeline:", error);
-    } finally {
-      setIsLoading(false);
     }
-  }
+  }, [session]);
 
   async function handleDelete(caseId: string) {
     if (!confirm("Are you sure you want to delete this case?")) return;
@@ -81,13 +78,14 @@ export default function DashboardPage() {
         toast.error("Failed to delete case");
       }
     } catch (error) {
+      console.error("Delete error:", error);
       toast.error("An error occurred while deleting");
     }
   }
 
   useEffect(() => {
     fetchMatters();
-  }, [session]);
+  }, [fetchMatters]);
 
   return (
     <div className="space-y-8">

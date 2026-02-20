@@ -24,6 +24,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   const apiUrl = getServerApiUrl();
   
+  type Run = {
+    id: string;
+    status: string;
+  };
+
   // 1. Get all runs for this matter
   const runsRes = await fetch(`${apiUrl}/matters/${matterId}/runs`, {
     headers: withServerAuthHeaders(undefined, {
@@ -36,8 +41,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     return new NextResponse(await runsRes.text(), { status: runsRes.status });
   }
 
-  const runs = await runsRes.json();
-  const latestSuccessRun = runs.find((r: any) => r.status === "success");
+  const runs: Run[] = await runsRes.json();
+  const latestSuccessRun = runs.find((r) => r.status === "success");
 
   if (!latestSuccessRun) {
     return NextResponse.json({ error: "No successful run found for this matter" }, { status: 404 });
