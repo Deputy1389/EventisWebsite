@@ -149,7 +149,7 @@ export default function AllCasesPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredMatters.length === 0 ? (
+              ) : sortedAndFilteredMatters.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
