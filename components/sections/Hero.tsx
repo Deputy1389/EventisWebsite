@@ -1,50 +1,65 @@
 import Link from "next/link";
+import { ArrowRight, FileText, Sparkles } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FileText } from "lucide-react";
 
 export function Hero() {
-    return (
-        <section className="relative py-20 md:py-32 overflow-hidden">
-            <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
-            <div className="container mx-auto px-4 text-center">
-                <div className="inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium text-muted-foreground mb-6 bg-background/50 backdrop-blur-sm">
-                    <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
-                    Now onboarding pilot partners
-                </div>
-                <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6 max-w-4xl mx-auto leading-tight">
-                    Court-ready medical chronologies <span className="text-primary">in minutes.</span>
-                </h1>
-                <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                    Linecite turns medical record PDFs into a structured event graph, then generates chronologies, specials, and missing-records reports with citations back to the source page.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <Button size="lg" className="w-full sm:w-auto text-base px-8 py-6" asChild>
-                        <Link href="/pilot">
-                            Request Pilot <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                    </Button>
-                    <Button variant="outline" size="lg" className="w-full sm:w-auto text-base px-8 py-6" asChild>
-                        <Link href="/sample">
-                            <FileText className="mr-2 h-4 w-4" /> View Sample Output
-                        </Link>
-                    </Button>
-                </div>
+  return (
+    <section className="relative overflow-hidden pb-16 pt-18 md:pb-24 md:pt-24">
+      <div className="absolute inset-0 fancy-grid opacity-30" />
+      <div className="pointer-events-none absolute -left-28 top-6 h-64 w-64 rounded-full bg-primary/12 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 top-24 h-72 w-72 rounded-full bg-accent/35 blur-3xl" />
 
-                <div className="mt-12 pt-8 border-t max-w-sm mx-auto flex justify-center gap-8 text-sm text-muted-foreground">
-                    <div>
-                        <span className="font-bold text-foreground block text-lg">99%+</span>
-                        Accuracy
-                    </div>
-                    <div>
-                        <span className="font-bold text-foreground block text-lg">10x</span>
-                        Faster
-                    </div>
-                    <div>
-                        <span className="font-bold text-foreground block text-lg">SOC2</span>
-                        Planned
-                    </div>
-                </div>
+      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
+        <div className="float-in legal-glass inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          Built for plaintiff firms running high-volume record review
+        </div>
+
+        <div className="mt-6 grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="float-in">
+            <h1 className="text-balance text-4xl leading-tight md:text-6xl">
+              The Command Center for
+              <span className="text-gradient"> Medical Record Litigation</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+              Linecite transforms raw PDFs into court-ready chronology intelligence with evidence-linked citations, contradiction
+              detection, and audit-first verification workflows.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button size="lg" asChild className="shadow-lg shadow-primary/20">
+                <Link href="/pilot">
+                  Book Pilot <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <Link href="/sample">
+                  <FileText className="mr-2 h-4 w-4" /> Open Sample Artifacts
+                </Link>
+              </Button>
             </div>
-        </section>
-    );
+          </div>
+
+          <div className="float-in legal-glass rounded-3xl p-6 shadow-xl shadow-primary/10">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Outcomes Firms Care About</p>
+            <div className="mt-5 grid gap-4">
+              <div className="rounded-xl border bg-background/70 p-4">
+                <p className="text-2xl font-semibold">6-12 hrs saved</p>
+                <p className="text-sm text-muted-foreground">Per matter during initial chronology drafting</p>
+              </div>
+              <div className="rounded-xl border bg-background/70 p-4">
+                <p className="text-2xl font-semibold">Page-level traceability</p>
+                <p className="text-sm text-muted-foreground">Every critical assertion anchored to source packet evidence</p>
+              </div>
+              <div className="rounded-xl border bg-background/70 p-4">
+                <p className="text-2xl font-semibold">Audit Mode verification</p>
+                <p className="text-sm text-muted-foreground">Event list and original records side-by-side for immediate review</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
+

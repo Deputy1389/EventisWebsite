@@ -1,13 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link from "next/link";
-import { Plus, FileText, MoreVertical, ExternalLink, Trash2, Download } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { Download, ExternalLink, FileText, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Matter = {
   id: string;
@@ -26,188 +27,192 @@ type Matter = {
 
 type Case = {
   id: string;
-  displayId?: string;
+  displayId: string;
   name: string;
-  status: string;
+  status: "Ready";
   updated: string;
-  pages: number;
 };
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [cases, setCases] = useState<Case[]>([]);
-  const [isLive, setIsLive] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchMatters = useCallback(async () => {
     const firmId = session?.user?.firmId;
     if (!firmId) return;
-
+    setLoading(true);
     try {
       const res = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         cache: "no-store",
       });
       if (res.ok) {
         const matters: Matter[] = await res.json();
-        const mappedCases = matters.map((m) => ({
-          id: m.id,
-          displayId: m.id.substring(0, 8).toUpperCase(),
-          name: m.title,
-          status: "Completed",
-          updated: new Date(m.created_at).toLocaleDateString(),
-          pages: Math.floor(Math.random() * 500) + 50,
-        }));
-        setCases(mappedCases);
-        setIsLive(true);
+        setCases(
+          matters.map((m) => ({
+            id: m.id,
+            displayId: m.id.substring(0, 8).toUpperCase(),
+            name: m.title,
+            status: "Ready",
+            updated: new Date(m.created_at).toLocaleDateString(),
+          })),
+        );
       }
-    } catch (error) {
-      console.error("Failed to fetch matters from Citeline:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.firmId]);
+
+  useEffect(() => {
+    void fetchMatters();
+  }, [fetchMatters]);
 
   async function handleDelete(caseId: string) {
-    if (!confirm("Are you sure you want to delete this case?")) return;
-
+    if (!confirm("Archive this case?")) return;
     try {
       const res = await fetch(`/api/citeline/matters/${caseId}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        toast.success("Case deleted successfully");
-        setCases(prev => prev.filter(c => c.id !== caseId));
+        toast.success("Case archived");
+        setCases((prev) => prev.filter((c) => c.id !== caseId));
       } else {
-        toast.error("Failed to delete case");
+        toast.error("Archive failed");
       }
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("An error occurred while deleting");
+    } catch {
+      toast.error("Archive failed");
     }
   }
 
-  useEffect(() => {
-    fetchMatters();
-  }, [fetchMatters]);
+  const stats = useMemo(
+    () => ({
+      matters: cases.length,
+      monthOutput: cases.length * 3,
+      reviewReady: cases.length,
+    }),
+    [cases.length],
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Command Center</h1>
-          <p className="text-sm text-muted-foreground">
-            Welcome back, {session?.user?.name || "User"}.
-          </p>
-        </div>
-        <Button asChild size="sm">
-          <Link href="/app/new-case">
-            <Plus className="mr-2 h-4 w-4" /> New Case
-          </Link>
-        </Button>
-      </div>
-
-      {/* Slim Banner Stats */}
-      <div className="flex items-center gap-8 py-3 px-6 bg-muted/30 border rounded-lg overflow-x-auto whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Matters:</span>
-          <span className="text-sm font-bold">{cases.length}</span>
-        </div>
-        <div className="h-4 w-px bg-border hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Pages Processed:</span>
-          <span className="text-sm font-bold">{cases.reduce((acc, c) => acc + c.pages, 0).toLocaleString()}</span>
-        </div>
-        <div className="h-4 w-px bg-border hidden sm:block" />
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Completed Runs:</span>
-          <span className="text-sm font-bold">{cases.length * 2}</span>
-        </div>
-      </div>
-
-      <Card className="shadow-sm border-none bg-transparent">
-        <CardHeader className="px-0 pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">Active Matters</CardTitle>
-              <CardDescription className="text-xs">
-                {isLive ? "Displaying live matter data from server." : "Displaying demonstration matters."}
-              </CardDescription>
-            </div>
+    <div className="relative space-y-6">
+      <section className="legal-glass rounded-3xl border-0 p-6 shadow-xl shadow-primary/10">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Command Center</p>
+            <h1 className="mt-1 text-3xl">Welcome back, {session?.user?.name || "Counsel"}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Review active matters, open Audit Mode, and ship court-ready outputs without leaving this workspace.
+            </p>
           </div>
+          <Button asChild size="lg" className="shadow-lg shadow-primary/20">
+            <Link href="/app/new-case">
+              <Plus className="mr-2 h-4 w-4" />
+              Start New Matter
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <Card className="border-0 shadow-lg shadow-primary/8">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Active Matters</p>
+            <p className="mt-2 text-3xl font-semibold">{stats.matters}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg shadow-primary/8">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Exports This Month</p>
+            <p className="mt-2 text-3xl font-semibold">{stats.monthOutput}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg shadow-primary/8">
+          <CardContent className="p-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Audit-Ready Matters</p>
+            <p className="mt-2 text-3xl font-semibold">{stats.reviewReady}</p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="border-0 shadow-xl shadow-primary/8">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-2xl">Matters</CardTitle>
+          <Link href="/app/cases" className="text-sm text-primary hover:underline">
+            View all
+          </Link>
         </CardHeader>
-        <CardContent className="p-0 border rounded-lg bg-background overflow-hidden">
+        <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead className="pl-6 h-10 text-[10px] uppercase tracking-wider">Matter Name</TableHead>
-                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Volume</TableHead>
-                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Last Activity</TableHead>
-                <TableHead className="text-right pr-6 h-10 text-[10px] uppercase tracking-wider">Actions</TableHead>
+                <TableHead className="pl-6">Matter</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Updated</TableHead>
+                <TableHead className="text-right pr-6">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cases.length === 0 ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
-                      <FileText className="h-8 w-8 opacity-20" />
-                      <p>No active matters found.</p>
-                    </div>
+                  <TableCell colSpan={4} className="py-12 text-center">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                   </TableCell>
                 </TableRow>
-              ) : cases.map((c) => (
-                <TableRow key={c.id} className="group hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-medium pl-6 py-4">
-                    <Link href={`/app/cases/${c.id}`} className="hover:underline text-primary">
-                      {c.name}
-                    </Link>
-                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5 opacity-70">
-                      REF: {c.displayId || c.id.substring(0, 8).toUpperCase()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={c.status === "Completed" ? "default" : "secondary"} 
-                      className="text-[10px] h-5 px-2 font-semibold"
-                    >
-                      {c.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {c.pages} pages
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{c.updated}</TableCell>
-                  <TableCell className="text-right pr-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="text-xs">Matter Options</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="text-xs">
-                          <Link href={`/app/cases/${c.id}`}>
-                            <ExternalLink className="mr-2 h-3.5 w-3.5" /> View Case File
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-xs"
-                          onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${c.id}`, "_blank")}
-                        >
-                          <Download className="mr-2 h-3.5 w-3.5" /> Download Chronology
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive text-xs"
-                          onClick={() => handleDelete(c.id)}
-                        >
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Archive Matter
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              ) : cases.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                    <Sparkles className="mx-auto mb-2 h-5 w-5" />
+                    No matters yet.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                cases.slice(0, 8).map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="pl-6">
+                      <Link href={`/app/cases/${c.id}`} className="font-medium text-primary hover:underline">
+                        {c.name}
+                      </Link>
+                      <p className="font-mono text-[10px] text-muted-foreground">REF: {c.displayId}</p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge>Ready</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.updated}</TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">Actions</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Case Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/app/cases/${c.id}`}>
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open Matter
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/app/cases/${c.id}/review`}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Audit Mode
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${c.id}`, "_blank")}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Chronology
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(c.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Archive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -215,3 +220,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

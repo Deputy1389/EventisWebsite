@@ -1,30 +1,48 @@
+const steps = [
+  {
+    step: "01",
+    title: "Upload Packet",
+    desc: "Drop one or multiple medical PDFs into the matter workspace. We preserve per-document identity and page order.",
+  },
+  {
+    step: "02",
+    title: "Run Extraction",
+    desc: "The engine identifies events, providers, citations, and litigation signals, then composes command-center artifacts.",
+  },
+  {
+    step: "03",
+    title: "Verify in Audit Mode",
+    desc: "Click any event, contradiction, or claim and jump directly into the original source page to validate instantly.",
+  },
+  {
+    step: "04",
+    title: "Export Work Product",
+    desc: "Generate chronology, specials, and missing-record output in formats your team already uses in active casework.",
+  },
+];
+
 export function HowItWorks() {
-    return (
-        <section className="py-20">
-            <div className="container mx-auto px-4">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold tracking-tight mb-4">How it works</h2>
-                    <p className="text-lg text-muted-foreground">From PDF to analysis in three simple steps.</p>
-                </div>
+  return (
+    <section className="bg-secondary/45 py-18 md:py-24">
+      <div className="mx-auto max-w-7xl px-4 md:px-6">
+        <div className="mb-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Workflow</p>
+            <h2 className="mt-2 text-3xl md:text-4xl">From upload to draft-ready outputs in one controlled flow</h2>
+          </div>
+        </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-                    <div className="hidden md:block absolute top-12 left-[20%] right-[20%] h-0.5 bg-border -z-10" />
-
-                    {[
-                        { step: 1, title: "Upload Records", desc: "Drag and drop your medical record PDFs. Eventis supports thousands of pages per case." },
-                        { step: 2, title: "AI Processing", desc: "Our ontology engine extracts events, providers, and billing items, linking them to source pages." },
-                        { step: 3, title: "Download Outputs", desc: "Receive your Chronology (DOCX), Specials, and Missing Records reports immediately." }
-                    ].map((item) => (
-                        <div key={item.step} className="flex flex-col items-center text-center bg-background p-6 rounded-lg">
-                            <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl mb-6 shadow-sm z-10">
-                                {item.step}
-                            </div>
-                            <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                            <p className="text-muted-foreground">{item.desc}</p>
-                        </div>
-                    ))}
-                </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {steps.map((item) => (
+            <div key={item.step} className="legal-glass rounded-2xl p-5">
+              <p className="text-xs font-semibold tracking-[0.2em] text-primary">{item.step}</p>
+              <h3 className="mt-2 text-2xl">{item.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
             </div>
-        </section>
-    );
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
+

@@ -1,15 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { MoreVertical, Search, FileText, ExternalLink, Trash2, Download, Loader2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { Download, ExternalLink, FileText, Loader2, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type Matter = {
   id: string;
@@ -29,189 +30,151 @@ type Matter = {
 export default function AllCasesPage() {
   const { data: session } = useSession();
   const [matters, setMatters] = useState<Matter[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
 
   const fetchMatters = useCallback(async () => {
     if (!session?.user?.firmId) return;
+    setLoading(true);
     try {
       const res = await fetch(`/api/citeline/firms/${session.user.firmId}/matters`, {
         cache: "no-store",
       });
       if (res.ok) {
-        const data: Matter[] = await res.json();
-        setMatters(data);
+        setMatters(await res.json());
       }
-    } catch (err) {
-      console.error("Failed to fetch cases:", err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [session]);
+  }, [session?.user?.firmId]);
 
   useEffect(() => {
-    fetchMatters();
+    void fetchMatters();
   }, [fetchMatters]);
 
   async function handleDelete(caseId: string) {
-    if (!confirm("Are you sure you want to delete this case?")) return;
-
+    if (!confirm("Archive this matter?")) return;
     try {
-      const res = await fetch(`/api/citeline/matters/${caseId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/citeline/matters/${caseId}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Case deleted successfully");
+        toast.success("Matter archived");
         setMatters((prev) => prev.filter((m) => m.id !== caseId));
       } else {
-        toast.error("Failed to delete case");
+        toast.error("Archive failed");
       }
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("An error occurred while deleting");
+    } catch {
+      toast.error("Archive failed");
     }
   }
 
-  const sortedAndFilteredMatters = useMemo(() => {
-    const result = matters.filter((m) =>
-      m.title.toLowerCase().includes(search.toLowerCase())
-    );
-
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "oldest":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case "az":
-          return a.title.localeCompare(b.title);
-        case "za":
-          return b.title.localeCompare(a.title);
-        default:
-          return 0;
-      }
+  const rows = useMemo(() => {
+    const filtered = matters.filter((m) => m.title.toLowerCase().includes(search.toLowerCase()));
+    filtered.sort((a, b) => {
+      if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      if (sortBy === "az") return a.title.localeCompare(b.title);
+      if (sortBy === "za") return b.title.localeCompare(a.title);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-
-    return result;
+    return filtered;
   }, [matters, search, sortBy]);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">All Cases</h1>
-          <p className="text-muted-foreground">Manage and view all your active medical chronologies.</p>
-        </div>
-      </div>
+      <section className="legal-glass rounded-3xl border-0 p-6">
+        <h1 className="text-3xl">All Matters</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Search and manage every case in your litigation workspace.</p>
+      </section>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 md:flex-row">
+        <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search cases..."
-            className="pl-8"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Input placeholder="Search matters..." className="pl-8" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Sort by" />
+          <SelectTrigger className="w-full md:w-[180px]">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="newest">Newest First</SelectItem>
-            <SelectItem value="oldest">Oldest First</SelectItem>
-            <SelectItem value="az">Name (A-Z)</SelectItem>
-            <SelectItem value="za">Name (Z-A)</SelectItem>
+            <SelectItem value="newest">Newest</SelectItem>
+            <SelectItem value="oldest">Oldest</SelectItem>
+            <SelectItem value="az">A-Z</SelectItem>
+            <SelectItem value="za">Z-A</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <Card className="shadow-sm border-none bg-transparent">
-        <CardContent className="p-0 border rounded-lg bg-background overflow-hidden">
+      <Card className="border-0 shadow-xl shadow-primary/8">
+        <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-muted/50">
+            <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead className="pl-6 h-10 text-[10px] uppercase tracking-wider">Case Name</TableHead>
-                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Status</TableHead>
-                <TableHead className="h-10 text-[10px] uppercase tracking-wider">Created At</TableHead>
-                <TableHead className="text-right pr-6 h-10 text-[10px] uppercase tracking-wider">Actions</TableHead>
+                <TableHead className="pl-6">Matter</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="pr-6 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground tracking-tight">Accessing records...</p>
-                    </div>
+                  <TableCell colSpan={4} className="py-12 text-center">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                   </TableCell>
                 </TableRow>
-              ) : sortedAndFilteredMatters.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
-                      <FileText className="h-8 w-8 opacity-20" />
-                      <p>No cases found matching your search.</p>
-                    </div>
+                  <TableCell colSpan={4} className="py-10 text-center text-muted-foreground">
+                    <FileText className="mx-auto mb-2 h-5 w-5" />
+                    No matters found.
                   </TableCell>
                 </TableRow>
-              ) : sortedAndFilteredMatters.map((m) => (
-                <TableRow key={m.id} className="group hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-medium pl-6 py-4">
-                    <div className="flex items-center">
-                      <FileText className="mr-2 h-4 w-4 text-muted-foreground opacity-50" />
-                      <Link href={`/app/cases/${m.id}`} className="hover:underline text-primary">
+              ) : (
+                rows.map((m) => (
+                  <TableRow key={m.id}>
+                    <TableCell className="pl-6">
+                      <Link href={`/app/cases/${m.id}`} className="font-medium text-primary hover:underline">
                         {m.title}
                       </Link>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5 ml-6 opacity-70">
-                      REF: {m.id.substring(0, 8).toUpperCase()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-[10px] h-5 px-2 font-semibold">
-                      Completed
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {new Date(m.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="text-xs">Case Options</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="text-xs">
-                          <Link href={`/app/cases/${m.id}`}>
-                            <ExternalLink className="mr-2 h-3.5 w-3.5" /> View Full File
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-xs"
-                          onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${m.id}`, "_blank")}
-                        >
-                          <Download className="mr-2 h-3.5 w-3.5" /> Download Chronology
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive text-xs"
-                          onClick={() => handleDelete(m.id)}
-                        >
-                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Archive Case
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      <p className="font-mono text-[10px] text-muted-foreground">REF: {m.id.substring(0, 8).toUpperCase()}</p>
+                    </TableCell>
+                    <TableCell><Badge>Ready</Badge></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="pr-6 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">Actions</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Matter Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={`/app/cases/${m.id}`}>
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open Matter
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/app/cases/${m.id}/review`}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Audit Mode
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${m.id}`, "_blank")}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Chronology
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(m.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Archive Matter
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -219,3 +182,4 @@ export default function AllCasesPage() {
     </div>
   );
 }
+
