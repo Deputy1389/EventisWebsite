@@ -3,11 +3,9 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
   ChevronLeft,
   ExternalLink,
   FileText,
-  GitBranch,
   Loader2,
   Scale,
   Search,
@@ -17,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Run = {
   id: string;
@@ -57,7 +56,11 @@ type EventRecord = {
   event_type?: string;
   date?: { normalized?: string; original_text?: string } | null;
   confidence?: number;
-  facts?: Array<{ text?: string }>;
+  facts?: Array<{
+    text?: string;
+    citation_id?: string;
+    citation_ids?: string[];
+  }>;
   source_page_numbers?: number[];
   citation_ids?: string[];
 };
@@ -66,6 +69,10 @@ type CommandCenterData = {
   claimRows: Record<string, unknown>[];
   causationChains: Record<string, unknown>[];
   collapseCandidates: Record<string, unknown>[];
+  defenseAttackPaths: Record<string, unknown>[];
+  objectionProfiles: Record<string, unknown>[];
+  evidenceUpgradeRecommendations: Record<string, unknown>[];
+  quoteLockRows: Record<string, unknown>[];
   contradictionMatrix: Record<string, unknown>[];
   narrativeDuality: Record<string, unknown> | null;
   citationFidelity: Record<string, unknown> | null;
@@ -129,6 +136,69 @@ function extractGraphPayload(payload: unknown): EvidenceGraphLike | null {
   return null;
 }
 
+function asRecordArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter((v): v is Record<string, unknown> => Boolean(v) && typeof v === "object") : [];
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function toStringId(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
+function collectCitationIds(row: Record<string, unknown>): string[] {
+  const out = new Set<string>();
+  const directKeys = ["citation_id", "primary_citation_id"] as const;
+  for (const key of directKeys) {
+    const id = toStringId(row[key]);
+    if (id) out.add(id);
+  }
+
+  const listKeys = [
+    "citation_ids",
+    "supporting_citation_ids",
+    "source_citation_ids",
+    "quote_lock_citation_ids",
+  ] as const;
+  for (const key of listKeys) {
+    const raw = row[key];
+    if (!Array.isArray(raw)) continue;
+    for (const value of raw) {
+      const id = toStringId(value);
+      if (id) out.add(id);
+    }
+  }
+
+  const citationsRaw = row.citations;
+  if (Array.isArray(citationsRaw)) {
+    for (const value of citationsRaw) {
+      if (typeof value === "string" || typeof value === "number") {
+        out.add(String(value));
+        continue;
+      }
+      if (!value || typeof value !== "object") continue;
+      const record = value as Record<string, unknown>;
+      const id = toStringId(record.citation_id ?? record.id);
+      if (id) out.add(id);
+    }
+  }
+
+  return [...out];
+}
+
+function textFrom(row: Record<string, unknown>, keys: string[], fallback = "N/A"): string {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return fallback;
+}
+
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
 
@@ -144,6 +214,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     claimRows: [],
     causationChains: [],
     collapseCandidates: [],
+    defenseAttackPaths: [],
+    objectionProfiles: [],
+    evidenceUpgradeRecommendations: [],
+    quoteLockRows: [],
     contradictionMatrix: [],
     narrativeDuality: null,
     citationFidelity: null,
@@ -151,6 +225,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const [query, setQuery] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedCitationId, setSelectedCitationId] = useState<string | null>(null);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [viewerEnabled, setViewerEnabled] = useState(false);
 
@@ -161,17 +236,30 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const latestRun = completedRuns[0] || null;
 
   const selectedEvent = useMemo(
-    () => events.find((e) => e.id === selectedEventId) || events[0] || null,
+    () => {
+      const preferred = events.find((e) => e.id === selectedEventId);
+      if (preferred) return preferred;
+      const withCitations = events.find((e) => e.citations.length > 0);
+      return withCitations || events[0] || null;
+    },
     [events, selectedEventId],
   );
 
   const documentMap = useMemo(() => {
     const map = new Map<string, Document>();
-    for (const d of documents) map.set(d.id, d);
+    for (const d of documents) map.set(String(d.id), d);
     return map;
   }, [documents]);
 
-  const selectedCitation = selectedEvent?.citations?.[0] || null;
+  const selectedCitation = useMemo(() => {
+    if (!selectedEvent) return null;
+    if (selectedCitationId) {
+      const explicit = selectedEvent.citations.find((c) => String(c.citation_id) === selectedCitationId);
+      if (explicit) return explicit;
+    }
+    return selectedEvent.citations[0] || null;
+  }, [selectedCitationId, selectedEvent]);
+
   const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
   const selectedPage = selectedCitation?.page_number || null;
   const viewerHref = selectedDocument
@@ -247,19 +335,49 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         }
 
         const citationById = new Map<string, CitationRecord>();
+        const citationIdsByGlobalPage = new Map<number, string[]>();
         for (const c of citations) {
-          if (!c?.citation_id) continue;
+          const cid = toStringId(c?.citation_id);
+          if (!cid) continue;
+          const globalPage = Number(c.page_number);
+          if (Number.isFinite(globalPage)) {
+            const bucket = citationIdsByGlobalPage.get(globalPage) || [];
+            bucket.push(cid);
+            citationIdsByGlobalPage.set(globalPage, bucket);
+          }
           const localPage = globalToLocalPage.get(Number(c.page_number));
-          citationById.set(c.citation_id, {
+          citationById.set(cid, {
             ...c,
+            citation_id: cid,
+            source_document_id: String(c.source_document_id || ""),
             page_number: localPage || c.page_number,
           });
         }
 
         const transformed = eventsRaw.map((e, idx) => {
-          const eventCitations = (e.citation_ids || [])
+          const linkedCitationIds = new Set<string>();
+          for (const id of e.citation_ids || []) {
+            const normalized = toStringId(id);
+            if (normalized) linkedCitationIds.add(normalized);
+          }
+          for (const fact of e.facts || []) {
+            const singleId = toStringId(fact?.citation_id);
+            if (singleId) linkedCitationIds.add(singleId);
+            for (const id of fact?.citation_ids || []) {
+              const normalized = toStringId(id);
+              if (normalized) linkedCitationIds.add(normalized);
+            }
+          }
+          for (const pageNo of e.source_page_numbers || []) {
+            const ids = citationIdsByGlobalPage.get(Number(pageNo)) || [];
+            for (const id of ids) linkedCitationIds.add(id);
+          }
+
+          const eventCitations = [...linkedCitationIds]
             .map((id) => citationById.get(id))
-            .filter((c): c is CitationRecord => Boolean(c));
+            .filter((c): c is CitationRecord => Boolean(c))
+            .sort((a, b) => `${a.source_document_id}|${a.page_number}`.localeCompare(`${b.source_document_id}|${b.page_number}`));
+
           return {
             id: e.event_id || `event-${idx}`,
             dateLabel: parseDateLabel(e),
@@ -272,21 +390,20 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
         transformed.sort((a, b) => `${a.dateLabel}|${a.id}`.localeCompare(`${b.dateLabel}|${b.id}`));
         setEvents(transformed);
-        setSelectedEventId((prev) => prev || transformed[0]?.id || null);
+        setSelectedEventId((prev) => prev || transformed.find((t) => t.citations.length > 0)?.id || transformed[0]?.id || null);
+        setSelectedCitationId((prev) => prev || null);
         setViewerEnabled(false);
         setCommandCenter({
-          claimRows: Array.isArray(ext?.claim_rows) ? ext.claim_rows : [],
-          causationChains: Array.isArray(ext?.causation_chains) ? ext.causation_chains : [],
-          collapseCandidates: Array.isArray(ext?.case_collapse_candidates) ? ext.case_collapse_candidates : [],
-          contradictionMatrix: Array.isArray(ext?.contradiction_matrix) ? ext.contradiction_matrix : [],
-          narrativeDuality:
-            ext?.narrative_duality && typeof ext.narrative_duality === "object"
-              ? (ext.narrative_duality as Record<string, unknown>)
-              : null,
-          citationFidelity:
-            ext?.citation_fidelity && typeof ext.citation_fidelity === "object"
-              ? (ext.citation_fidelity as Record<string, unknown>)
-              : null,
+          claimRows: asRecordArray(ext?.claim_rows),
+          causationChains: asRecordArray(ext?.causation_chains),
+          collapseCandidates: asRecordArray(ext?.case_collapse_candidates),
+          defenseAttackPaths: asRecordArray(ext?.defense_attack_paths),
+          objectionProfiles: asRecordArray(ext?.objection_profiles),
+          evidenceUpgradeRecommendations: asRecordArray(ext?.evidence_upgrade_recommendations),
+          quoteLockRows: asRecordArray(ext?.quote_lock_rows),
+          contradictionMatrix: asRecordArray(ext?.contradiction_matrix),
+          narrativeDuality: asRecord(ext?.narrative_duality),
+          citationFidelity: asRecord(ext?.citation_fidelity),
         });
         return;
       }
@@ -296,6 +413,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         claimRows: [],
         causationChains: [],
         collapseCandidates: [],
+        defenseAttackPaths: [],
+        objectionProfiles: [],
+        evidenceUpgradeRecommendations: [],
+        quoteLockRows: [],
         contradictionMatrix: [],
         narrativeDuality: null,
         citationFidelity: null,
@@ -347,6 +468,32 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   useEffect(() => {
     setViewerEnabled(false);
   }, [selectedEventId]);
+
+  useEffect(() => {
+    if (!selectedEvent) {
+      setSelectedCitationId(null);
+      return;
+    }
+    if (!selectedCitationId) {
+      setSelectedCitationId(selectedEvent.citations[0]?.citation_id || null);
+      return;
+    }
+    const exists = selectedEvent.citations.some((c) => c.citation_id === selectedCitationId);
+    if (!exists) {
+      setSelectedCitationId(selectedEvent.citations[0]?.citation_id || null);
+    }
+  }, [selectedEvent, selectedCitationId]);
+
+  const focusCitation = useCallback((citationId: string) => {
+    for (const event of events) {
+      const found = event.citations.find((c) => c.citation_id === citationId);
+      if (!found) continue;
+      setSelectedEventId(event.id);
+      setSelectedCitationId(citationId);
+      setViewerEnabled(true);
+      return;
+    }
+  }, [events]);
 
   if (isLoading) {
     return (
@@ -410,6 +557,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Causation Chains</div><div className="text-xl font-semibold">{commandCenter.causationChains.length}</div></CardContent></Card>
         <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Contradictions</div><div className="text-xl font-semibold">{commandCenter.contradictionMatrix.length}</div></CardContent></Card>
       </div>
+      <div className="mx-6 mt-3 grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Case Collapse</div><div className="text-xl font-semibold">{commandCenter.collapseCandidates.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Defense Paths</div><div className="text-xl font-semibold">{commandCenter.defenseAttackPaths.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Objection Profiles</div><div className="text-xl font-semibold">{commandCenter.objectionProfiles.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Evidence Upgrades</div><div className="text-xl font-semibold">{commandCenter.evidenceUpgradeRecommendations.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Quote Locks</div><div className="text-xl font-semibold">{commandCenter.quoteLockRows.length}</div></CardContent></Card>
+      </div>
 
       <div className="flex-1 overflow-hidden mt-4 mx-6 mb-6 grid grid-cols-12 gap-4">
         <div className="col-span-4 border rounded-lg bg-card flex flex-col overflow-hidden">
@@ -457,13 +611,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           </div>
         </div>
 
-        <div className="col-span-8 grid grid-rows-[1.2fr_1fr] gap-4 min-h-0">
+        <div className="col-span-8 grid grid-rows-[1.05fr_1.35fr] gap-4 min-h-0">
           <div className="border rounded-lg bg-card flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">Record Packet Viewer</div>
                 <div className="text-xs text-muted-foreground">
-                  {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}` : "Select an event with citations to open the source packet"}
+                  {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}` : "Select an event or signal citation to open the source packet"}
                 </div>
               </div>
               {viewerHref && (
@@ -494,72 +648,194 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             </div>
           </div>
 
-          <div className="border rounded-lg bg-card overflow-hidden">
+          <div className="border rounded-lg bg-card overflow-hidden min-h-0">
             <div className="px-4 py-3 border-b">
               <div className="text-sm font-semibold flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-amber-600" />
                 Command Center Signals
               </div>
             </div>
-            <div className="p-4 grid grid-cols-2 gap-4 text-xs overflow-y-auto max-h-[260px]">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" /> Causation</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  {commandCenter.causationChains.slice(0, 3).map((row, i) => (
-                    <div key={`cause-${i}`} className="border rounded p-2">
-                      <div className="font-medium">{String(row["body_region"] || "General")}</div>
-                      <div className="text-muted-foreground">Integrity: {String(row["chain_integrity_score"] ?? "n/a")}</div>
-                    </div>
-                  ))}
-                  {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation chain output.</div>}
-                </CardContent>
-              </Card>
+            <Tabs defaultValue="overview" className="h-full">
+              <TabsList className="mx-4 mt-3 grid grid-cols-3 md:grid-cols-7 w-auto">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="claims">Claims</TabsTrigger>
+                <TabsTrigger value="causation">Causation</TabsTrigger>
+                <TabsTrigger value="collapse">Collapse</TabsTrigger>
+                <TabsTrigger value="contradictions">Contradictions</TabsTrigger>
+                <TabsTrigger value="narrative">Narrative</TabsTrigger>
+                <TabsTrigger value="defense">Defense</TabsTrigger>
+              </TabsList>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Case Collapse</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  {commandCenter.collapseCandidates.slice(0, 3).map((row, i) => (
-                    <div key={`collapse-${i}`} className="border rounded p-2">
-                      <div className="font-medium">{String(row["fragility_type"] || "Unknown")}</div>
-                      <div className="text-muted-foreground">Score: {String(row["fragility_score"] ?? "n/a")}</div>
-                    </div>
-                  ))}
-                  {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No collapse candidates.</div>}
-                </CardContent>
-              </Card>
-
-              <Card className="col-span-2">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xs">Selected Event Citations</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {(selectedEvent?.citations || []).length === 0 && (
-                    <div className="text-muted-foreground">No direct citations linked for this event.</div>
-                  )}
-                  {(selectedEvent?.citations || []).slice(0, 8).map((c) => {
-                    const doc = documentMap.get(c.source_document_id);
-                    const href = doc ? `/api/citeline/documents/${doc.id}/download#page=${c.page_number}` : null;
-                    return (
-                      <div key={c.citation_id} className="border rounded p-2 flex items-start justify-between gap-2">
-                        <div>
-                          <div className="font-medium">{doc?.filename || c.source_document_id} p. {c.page_number}</div>
-                          <div className="text-muted-foreground">{(c.snippet || "No snippet available.").slice(0, 220)}</div>
+              <TabsContent value="overview" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Card><CardContent className="p-3"><div className="text-muted-foreground">Claim Rows</div><div className="text-lg font-semibold">{commandCenter.claimRows.length}</div></CardContent></Card>
+                  <Card><CardContent className="p-3"><div className="text-muted-foreground">Citation Fidelity</div><div className="text-lg font-semibold">{commandCenter.citationFidelity ? "Ready" : "Missing"}</div></CardContent></Card>
+                </div>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs">Selected Event Citations</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {(selectedEvent?.citations || []).length === 0 && (
+                      <div className="text-muted-foreground">No direct citations linked for this event.</div>
+                    )}
+                    {(selectedEvent?.citations || []).slice(0, 12).map((c) => {
+                      const doc = documentMap.get(c.source_document_id);
+                      const href = doc ? `/api/citeline/documents/${doc.id}/download#page=${c.page_number}` : null;
+                      return (
+                        <div key={c.citation_id} className="border rounded p-2 flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium">{doc?.filename || c.source_document_id} p. {c.page_number}</div>
+                            <div className="text-muted-foreground">{(c.snippet || "No snippet available.").slice(0, 220)}</div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="secondary" onClick={() => { setSelectedCitationId(c.citation_id); setViewerEnabled(true); }}>
+                              Preview
+                            </Button>
+                            {href && (
+                              <Button size="sm" variant="ghost" asChild>
+                                <a href={href} target="_blank" rel="noreferrer">Open</a>
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        {href && (
-                          <Button size="sm" variant="ghost" asChild>
-                            <a href={href} target="_blank" rel="noreferrer">Open</a>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="claims" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
+                {commandCenter.claimRows.length === 0 && <div className="text-muted-foreground">No claim rows found in this run.</div>}
+                {commandCenter.claimRows.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  return (
+                    <div key={`claim-${idx}`} className="border rounded-md p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{textFrom(row, ["claim_type"], "Claim")}</div>
+                        <div className="text-muted-foreground">{textFrom(row, ["date"], "Undated")}</div>
+                      </div>
+                      <div className="text-muted-foreground mt-1">{textFrom(row, ["body_region", "provider"], "General")}</div>
+                      <div className="mt-2 leading-relaxed">{textFrom(row, ["assertion", "claim_text", "summary"], "No claim text available.")}</div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <div className="text-muted-foreground">Support: {textFrom(row, ["support_score", "support_strength"], "n/a")}</div>
+                        {citationIds[0] && (
+                          <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>
+                            Open Citation
                           </Button>
                         )}
                       </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            </div>
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
+              <TabsContent value="causation" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
+                {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation chain output.</div>}
+                {commandCenter.causationChains.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  const rungs = Array.isArray(row.rungs) ? row.rungs.length : 0;
+                  return (
+                    <div key={`cause-${idx}`} className="border rounded-md p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{textFrom(row, ["body_region"], "General")}</div>
+                        <Badge variant="secondary">Integrity {textFrom(row, ["chain_integrity_score"], "n/a")}</Badge>
+                      </div>
+                      <div className="mt-1 text-muted-foreground">{rungs} rung(s) in chain</div>
+                      <div className="mt-2">{textFrom(row, ["causation_thesis", "summary"], "No causation summary.")}</div>
+                      {citationIds[0] && <Button className="mt-2" size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Open Citation</Button>}
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
+              <TabsContent value="collapse" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
+                {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No case collapse candidates.</div>}
+                {commandCenter.collapseCandidates.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  return (
+                    <div key={`collapse-${idx}`} className="border rounded-md p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{textFrom(row, ["fragility_type", "title"], "Fragility Candidate")}</div>
+                        <Badge variant="secondary">Score {textFrom(row, ["fragility_score", "risk_score"], "n/a")}</Badge>
+                      </div>
+                      <div className="mt-2">{textFrom(row, ["argument", "reasoning", "summary"], "No details available.")}</div>
+                      {citationIds[0] && <Button className="mt-2" size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Open Citation</Button>}
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
+              <TabsContent value="contradictions" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
+                {commandCenter.contradictionMatrix.length === 0 && <div className="text-muted-foreground">No contradiction matrix output.</div>}
+                {commandCenter.contradictionMatrix.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  return (
+                    <div key={`contra-${idx}`} className="border rounded-md p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-medium">{textFrom(row, ["contradiction_type", "label", "category"], "Contradiction")}</div>
+                        <Badge variant="secondary">{textFrom(row, ["severity", "materiality", "risk"], "n/a")}</Badge>
+                      </div>
+                      <div className="mt-2">{textFrom(row, ["description", "analysis", "summary"], "No contradiction description.")}</div>
+                      {citationIds[0] && <Button className="mt-2" size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Open Citation</Button>}
+                    </div>
+                  );
+                })}
+              </TabsContent>
+
+              <TabsContent value="narrative" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-3">
+                {!commandCenter.narrativeDuality && <div className="text-muted-foreground">No narrative duality output.</div>}
+                {commandCenter.narrativeDuality && (
+                  <>
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-xs">Plaintiff Narrative</CardTitle></CardHeader>
+                      <CardContent>{textFrom(commandCenter.narrativeDuality, ["plaintiff_narrative", "plaintiff", "plaintiff_theory"], "No plaintiff narrative available.")}</CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-xs">Defense Narrative</CardTitle></CardHeader>
+                      <CardContent>{textFrom(commandCenter.narrativeDuality, ["defense_narrative", "defense", "defense_theory"], "No defense narrative available.")}</CardContent>
+                    </Card>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="defense" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-3">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs">Defense Attack Paths ({commandCenter.defenseAttackPaths.length})</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {commandCenter.defenseAttackPaths.length === 0 && <div className="text-muted-foreground">No defense attack paths.</div>}
+                    {commandCenter.defenseAttackPaths.map((row, idx) => (
+                      <div key={`attack-${idx}`} className="border rounded-md p-2">
+                        <div className="font-medium">{textFrom(row, ["attack_vector", "title"], "Attack Path")}</div>
+                        <div className="text-muted-foreground mt-1">{textFrom(row, ["description", "summary"], "No details.")}</div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs">Objection Profiles ({commandCenter.objectionProfiles.length})</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {commandCenter.objectionProfiles.length === 0 && <div className="text-muted-foreground">No objection profiles.</div>}
+                    {commandCenter.objectionProfiles.map((row, idx) => (
+                      <div key={`obj-${idx}`} className="border rounded-md p-2">
+                        <div className="font-medium">{textFrom(row, ["objection_type", "title"], "Objection")}</div>
+                        <div className="text-muted-foreground mt-1">{textFrom(row, ["reasoning", "summary"], "No details.")}</div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-xs">Evidence Upgrades ({commandCenter.evidenceUpgradeRecommendations.length})</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    {commandCenter.evidenceUpgradeRecommendations.length === 0 && <div className="text-muted-foreground">No evidence upgrade recommendations.</div>}
+                    {commandCenter.evidenceUpgradeRecommendations.map((row, idx) => (
+                      <div key={`upgrade-${idx}`} className="border rounded-md p-2">
+                        <div className="font-medium">{textFrom(row, ["recommendation", "title"], "Recommendation")}</div>
+                        <div className="text-muted-foreground mt-1">{textFrom(row, ["justification", "summary"], "No details.")}</div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
