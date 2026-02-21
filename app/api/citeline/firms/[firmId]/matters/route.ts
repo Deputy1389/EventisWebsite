@@ -72,11 +72,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       body: payload,
     });
 
-    if (!res.ok) {
-      console.error(`Citeline matter creation failed with status ${res.status}:`, await res.text());
-    }
-
     const text = await res.text();
+    if (!res.ok) {
+      console.error(`Citeline matter creation failed with status ${res.status}:`, text);
+    }
     return new NextResponse(text, {
       status: res.status,
       headers: { "Content-Type": res.headers.get("Content-Type") || "application/json" },
