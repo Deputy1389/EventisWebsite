@@ -56,6 +56,15 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   const latestSuccessRun = runs.find((r) => r.status === "success");
   const activeRun = runs.find((r) => r.status === "pending" || r.status === "running");
 
+  const copyToClipboard = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error(`Failed to copy ${label.toLowerCase()}`);
+    }
+  };
+
   const metrics = latestSuccessRun?.metrics || {
     pages_total: documents.reduce((acc, d) => acc + (d.page_count || 0), 0),
     events_total: 0,
@@ -176,7 +185,17 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Ref</p>
-          <p className="mt-1 font-mono text-sm">{caseId.substring(0, 12).toUpperCase()}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="font-mono text-xs break-all">{caseId}</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => copyToClipboard("Case ID", caseId)}
+            >
+              Copy
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -257,7 +276,19 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                   ) : (
                     runs.map((run) => (
                       <TableRow key={run.id}>
-                        <TableCell className="font-mono text-xs">{run.id.substring(0, 8).toUpperCase()}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="break-all">{run.id}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard("Run ID", run.id)}
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        </TableCell>
                         <TableCell><Badge variant={run.status === "success" ? "default" : "secondary"}>{run.status}</Badge></TableCell>
                         <TableCell>{run.started_at ? new Date(run.started_at).toLocaleString() : "Pending"}</TableCell>
                         <TableCell className="text-right">
@@ -338,4 +369,3 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     </div>
   );
 }
-
