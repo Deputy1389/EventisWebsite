@@ -79,6 +79,7 @@ type CommandCenterData = {
   contradictionMatrix: Record<string, unknown>[];
   narrativeDuality: Record<string, unknown> | null;
   citationFidelity: Record<string, unknown> | null;
+  qualityGate?: Record<string, unknown> | null;
 };
 
 type AuditEvent = {
@@ -223,6 +224,31 @@ function countMoatSignals(ext: Record<string, unknown>): number {
   return total;
 }
 
+function deriveImpact(score: number): "Low" | "Med" | "High" {
+  if (score >= 70) return "High";
+  if (score >= 40) return "Med";
+  return "Low";
+}
+
+function deriveSeverity(eventType: string, summary: string): "Low" | "Med" | "High" {
+  const blob = `${eventType} ${summary}`.toLowerCase();
+  if (/(surgery|procedure|hospital|admission|discharge|er|emergency|fracture|herniation)/.test(blob)) return "High";
+  if (/(imaging|mri|ct|xray|injection|epidural|radiculopathy|severe)/.test(blob)) return "Med";
+  return "Low";
+}
+
+function deriveTags(eventType: string, summary: string): string[] {
+  const blob = `${eventType} ${summary}`.toLowerCase();
+  const tags = new Set<string>();
+  if (/(imaging|mri|ct|xray)/.test(blob)) tags.add("Imaging");
+  if (/(surgery|procedure|injection|epidural)/.test(blob)) tags.add("Escalation");
+  if (/(pain|radiculopathy|strain|sprain)/.test(blob)) tags.add("Damages");
+  if (/(mechanism|mvc|incident|injury)/.test(blob)) tags.add("Causation");
+  if (/(plateau|no change|unchanged)/.test(blob)) tags.add("Plateau");
+  if (/(contradiction|denies|inconsistent)/.test(blob)) tags.add("Defense Exposure");
+  return [...tags];
+}
+
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
 
@@ -257,6 +283,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [mobilePane, setMobilePane] = useState<"events" | "viewer">("events");
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [docPageCounts, setDocPageCounts] = useState<Record<string, number>>({});
+  const [activePanel, setActivePanel] = useState<"strategic" | "summary" | "chronology" | "vault">("strategic");
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
@@ -439,6 +466,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           contradictionMatrix: asRecordArray(ext?.contradiction_matrix),
           narrativeDuality: asRecord(ext?.narrative_duality),
           citationFidelity: asRecord(ext?.citation_fidelity),
+          qualityGate: asRecord(ext?.quality_gate),
         };
 
         const moatScore =
@@ -597,6 +625,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const citationCoverage = events.length ? Math.round((anchoredEvents / events.length) * 100) : 0;
   const auditScoreRaw = latestRun?.metrics?.audit_score;
   const auditScore = typeof auditScoreRaw === "number" ? String(Math.round(auditScoreRaw)) : "N/A";
+  const qualityGate = commandCenter.qualityGate || {};
+  const filteredCount = Number(qualityGate.num_snippets_filtered || 0);
+  const cleanedCount = Number(qualityGate.num_snippets_cleaned || 0);
+  const noiseRisk = filteredCount > 10 ? "High" : filteredCount > 3 ? "Med" : "Low";
+  const evidenceCoverageLabel = citationCoverage >= 70 ? "Strong" : citationCoverage >= 40 ? "Moderate" : "Weak";
+  const defenseRisk = commandCenter.defenseAttackPaths.length > 0 || commandCenter.contradictionMatrix.length > 0 ? "Med" : "Low";
+  const chronologyIntegrity = Math.min(100, Math.round((anchoredEvents / Math.max(1, events.length)) * 100));
 
   if (isLoading) {
     return (
@@ -624,10 +659,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           <div className="hidden xl:flex items-center gap-1 text-[11px] text-muted-foreground">
             <Badge variant="outline">{packetFilename}</Badge>
             <Badge variant="outline">{packetPages || "?"} pages</Badge>
-            <Badge variant="outline">Anchored {anchoredEvents}</Badge>
-            <Badge variant="outline">Claim Candidates {commandCenter.claimRows.length}</Badge>
-            <Badge variant="outline">Coverage {citationCoverage}%</Badge>
-            <Badge variant="outline">Audit Score {auditScore}</Badge>
+            <Badge variant="outline">Chronology Integrity {chronologyIntegrity}/100</Badge>
+            <Badge variant="outline">Evidence Coverage {evidenceCoverageLabel}</Badge>
+            <Badge variant="outline">Noise Risk {noiseRisk}</Badge>
+            <Badge variant="outline">Defense Risk {defenseRisk}</Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -675,62 +710,129 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         )}
       </div>
 
-      <div className="mx-6 mt-3 flex gap-2 [@media(min-width:1100px)]:hidden">
-        <Button size="sm" variant={mobilePane === "events" ? "default" : "outline"} onClick={() => setMobilePane("events")}>Events</Button>
-        <Button size="sm" variant={mobilePane === "viewer" ? "default" : "outline"} onClick={() => setMobilePane("viewer")}>Viewer</Button>
+      <div className="mx-6 mt-3 flex flex-wrap gap-2">
+        <Button size="sm" variant={activePanel === "strategic" ? "default" : "outline"} onClick={() => setActivePanel("strategic")}>
+          Strategic Overview
+        </Button>
+        <Button size="sm" variant={activePanel === "summary" ? "default" : "outline"} onClick={() => setActivePanel("summary")}>
+          Injury Arc
+        </Button>
+        <Button size="sm" variant={activePanel === "chronology" ? "default" : "outline"} onClick={() => setActivePanel("chronology")}>
+          Chronology
+        </Button>
+        <Button size="sm" variant={activePanel === "vault" ? "default" : "outline"} onClick={() => setActivePanel("vault")}>
+          Evidence Vault
+        </Button>
       </div>
 
-      <div className={`flex-1 overflow-hidden mt-3 mx-6 ${selectedEvent ? "mb-2" : "mb-6"} grid [@media(min-width:1100px)]:grid-cols-[35%_65%] gap-4`}>
-        <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "viewer" ? "hidden [@media(min-width:1100px)]:flex" : "flex"}`}>
-          <div className="p-3 border-b">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                className="w-full border rounded-md py-2 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Search events, symptoms, procedures..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {isGraphLoading && (
-              <div className="text-xs text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading event graph...
+      {activePanel === "strategic" && (
+        <div className="mx-6 mt-3 mb-6 grid gap-4">
+          <div className="border rounded-lg bg-card p-4">
+            <div className="text-sm font-semibold mb-3">Strategic Overview (Moat)</div>
+            {countMoatSignals(commandCenter as Record<string, unknown>) === 0 ? (
+              <div className="text-sm text-muted-foreground">No strategic flags detected in this record set.</div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {[...commandCenter.collapseCandidates, ...commandCenter.defenseAttackPaths, ...commandCenter.contradictionMatrix].slice(0, 8).map((row, idx) => {
+                  const score = Number(row.fragility_score || row.confidence || 50);
+                  const impact = deriveImpact(score);
+                  const citationIds = collectCitationIds(row);
+                  return (
+                    <div key={`moat-${idx}`} className="border rounded-md p-3 text-xs space-y-2">
+                      <div className="font-medium">{textFrom(row, ["title", "fragility_type", "attack", "category"], "Strategic Signal")}</div>
+                      <div className="text-muted-foreground">{textFrom(row, ["why", "path", "description", "analysis"], "Litigation implication not available.")}</div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">Impact {impact}</Badge>
+                        <Badge variant="outline">Confidence {Math.round(score)}</Badge>
+                        <Badge variant="outline">Cites {citationIds.length}</Badge>
+                        {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>View Evidence</Button>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-            {!isGraphLoading && filteredEvents.length === 0 && (
-              <div className="text-sm text-muted-foreground p-2">No events available yet. Run analysis to populate Audit Mode.</div>
-            )}
-            {filteredEvents.map((e) => {
-              const active = selectedEvent?.id === e.id;
-              const contradictionCount = contradictionCountByEvent.get(e.id) || 0;
-              return (
-                <button
-                  type="button"
-                  key={e.id}
-                  onClick={() => setSelectedEventId(e.id)}
-                  className={`w-full text-left border rounded-md p-3 transition ${active ? "border-primary bg-primary/5" : "hover:border-slate-300"}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
-                      {contradictionCount > 0 && <Badge variant="destructive" className="text-[9px]">Conflicts {contradictionCount}</Badge>}
-                    </div>
-                  </div>
-                  <p className="text-xs mt-2 leading-relaxed line-clamp-2">{e.summary}</p>
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>{e.citations.length} cites</span>
-                    <span>{e.id}</span>
-                  </div>
-                </button>
-              );
-            })}
           </div>
         </div>
+      )}
 
-        <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "events" ? "hidden [@media(min-width:1100px)]:flex" : "flex"} min-h-0`}>
+      {activePanel === "summary" && (
+        <div className="mx-6 mt-3 mb-6 grid gap-4">
+          <div className="border rounded-lg bg-card p-4 space-y-3">
+            <div className="text-sm font-semibold">Injury Arc Summary</div>
+            <div className="text-sm text-muted-foreground">
+              Anchored events: {anchoredEvents} of {events.length}. Evidence coverage: {evidenceCoverageLabel}. Noise risk: {noiseRisk}.
+            </div>
+            <div className="space-y-2">
+              {events.slice(0, 5).map((e) => (
+                <div key={`summary-${e.id}`} className="border rounded-md p-2 text-xs">
+                  <div className="font-medium">{e.dateLabel} - {e.eventType}</div>
+                  <div className="text-muted-foreground">{e.summary}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activePanel === "chronology" && (
+        <div className={`flex-1 overflow-hidden mt-3 mx-6 ${selectedEvent ? "mb-2" : "mb-6"} grid [@media(min-width:1100px)]:grid-cols-[35%_65%] gap-4`}>
+          <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "viewer" ? "hidden [@media(min-width:1100px)]:flex" : "flex"}`}>
+            <div className="p-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  className="w-full border rounded-md py-2 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="Search events, symptoms, procedures..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {isGraphLoading && (
+                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading event graph...
+                </div>
+              )}
+              {!isGraphLoading && filteredEvents.length === 0 && (
+                <div className="text-sm text-muted-foreground p-2">No events available yet. Run analysis to populate Audit Mode.</div>
+              )}
+              {filteredEvents.map((e) => {
+                const active = selectedEvent?.id === e.id;
+                const contradictionCount = contradictionCountByEvent.get(e.id) || 0;
+                const tags = deriveTags(e.eventType, e.summary);
+                const severity = deriveSeverity(e.eventType, e.summary);
+                return (
+                  <button
+                    type="button"
+                    key={e.id}
+                    onClick={() => setSelectedEventId(e.id)}
+                    className={`w-full text-left border rounded-md p-3 transition ${active ? "border-primary bg-primary/5" : "hover:border-slate-300"}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
+                        <Badge variant="outline" className="text-[9px]">Severity {severity}</Badge>
+                        {contradictionCount > 0 && <Badge variant="destructive" className="text-[9px]">Conflicts {contradictionCount}</Badge>}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {tags.map((t) => <Badge key={`${e.id}-${t}`} variant="outline" className="text-[9px]">{t}</Badge>)}
+                    </div>
+                    <p className="text-xs mt-2 leading-relaxed line-clamp-2">{e.summary}</p>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>{e.citations.length} cites</span>
+                      <span>{e.id}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "events" ? "hidden [@media(min-width:1100px)]:flex" : "flex"} min-h-0`}>
             <div className="px-4 py-3 border-b flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">Record Packet Viewer</div>
@@ -791,7 +893,43 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               )}
             </div>
           </div>
-      </div>
+        </div>
+      )}
+
+      {activePanel === "vault" && (
+        <div className="mx-6 mt-3 mb-6 border rounded-lg bg-card flex flex-col overflow-hidden min-h-[500px]">
+          <div className="px-4 py-3 border-b flex items-center justify-between">
+            <div className="text-sm font-semibold">Evidence Vault</div>
+            <div className="flex items-center gap-2">
+              {latestRun && (
+                <Button size="sm" variant="outline" onClick={() => {
+                  setViewerMode("chronology");
+                  setViewerEnabled(true);
+                  setViewerKey((k) => k + 1);
+                }}>
+                  Chronology PDF
+                </Button>
+              )}
+              {viewerHref && (
+                <Button size="sm" onClick={() => setViewerEnabled((v) => !v)}>
+                  {viewerEnabled ? "Pause Preview" : "Load Preview"}
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 bg-muted/60 min-h-[320px]">
+            {viewerHref && viewerEnabled ? (
+              <iframe key={viewerKey} title="Evidence vault viewer" src={viewerHref} className="w-full h-full border-0" />
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
+                  <FileText className="h-4 w-4 mr-2" /> Preview paused. Click Load Preview.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {selectedEvent && (
         <div className={`mx-6 mb-6 border rounded-lg bg-card overflow-hidden ${dockCollapsed ? "h-12" : "h-[300px]"}`}>
