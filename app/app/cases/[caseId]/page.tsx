@@ -199,6 +199,23 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     }
   }
 
+  async function handleRetryRun() {
+    if (activeRun) {
+      await handleForceFail(activeRun.id);
+    }
+    const res = await fetch(`/api/citeline/matters/${caseId}/runs`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      toast.error(parseApiError(errorText) || "Failed to start retry");
+      return;
+    }
+    toast.success("Retry started");
+    void fetchData();
+  }
+
   if (loading) return <div className="flex h-[60vh] items-center justify-center">Loading matter...</div>;
   if (!matter) return <div className="py-20 text-center">Matter not found.</div>;
 
@@ -271,6 +288,9 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
               </Button>
               <Button variant="destructive" size="sm" className="ml-2" onClick={() => handleForceFail(activeRun.id)}>
                 Force Fail
+              </Button>
+              <Button variant="secondary" size="sm" className="ml-2" onClick={handleRetryRun}>
+                Retry Run
               </Button>
             </div>
           </CardContent>
