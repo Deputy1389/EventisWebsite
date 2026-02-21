@@ -15,6 +15,21 @@ type CreatedMatter = {
   id: string;
 };
 
+function parseErrorMessage(text: string): string {
+  try {
+    const data = JSON.parse(text);
+    if (typeof data === "string") return data;
+    if (data && typeof data === "object") {
+      if (typeof data.error === "string") return data.error;
+      if (typeof data.detail === "string") return data.detail;
+      if (typeof data.message === "string") return data.message;
+    }
+  } catch {
+    // Not JSON, fall through to raw text
+  }
+  return text;
+}
+
 export default function NewCasePage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -49,8 +64,9 @@ export default function NewCasePage() {
       });
 
       if (!matterRes.ok) {
-        const error = await matterRes.text();
-        throw new Error(`Failed to create matter: ${error}`);
+        const errorText = await matterRes.text();
+        const errorMessage = parseErrorMessage(errorText);
+        throw new Error(`Failed to create matter: ${errorMessage}`);
       }
 
       const matter: CreatedMatter = await matterRes.json();
@@ -66,8 +82,9 @@ export default function NewCasePage() {
       });
 
       if (!uploadRes.ok) {
-        const error = await uploadRes.text();
-        throw new Error(`Failed to upload document: ${error}`);
+        const errorText = await uploadRes.text();
+        const errorMessage = parseErrorMessage(errorText);
+        throw new Error(`Failed to upload document: ${errorMessage}`);
       }
 
       // 3. Trigger extraction run
