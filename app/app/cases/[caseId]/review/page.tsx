@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -83,6 +83,18 @@ type EvidenceGraphLike = {
 };
 
 const SUCCESS_STATUSES = new Set(["success", "partial", "completed"]);
+
+const auditContrastVars = {
+  "--background": "oklch(0.99 0.003 84)",
+  "--foreground": "oklch(0.2 0.02 72)",
+  "--card": "oklch(1 0 0)",
+  "--card-foreground": "oklch(0.2 0.02 72)",
+  "--muted": "oklch(0.95 0.008 84)",
+  "--muted-foreground": "oklch(0.44 0.02 72)",
+  "--border": "oklch(0.86 0.01 82)",
+  "--secondary": "oklch(0.94 0.01 84)",
+  "--secondary-foreground": "oklch(0.2 0.02 72)",
+} as CSSProperties;
 
 function normalizeEventType(raw: string | undefined): string {
   return (raw || "Encounter")
@@ -347,8 +359,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   }
 
   return (
-    <div className="h-screen -m-8 flex flex-col bg-slate-50/40">
-      <div className="h-14 border-b bg-white px-6 flex items-center justify-between">
+    <div className="h-screen -m-8 flex flex-col bg-background text-foreground" style={auditContrastVars}>
+      <div className="h-14 border-b bg-card px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href={`/app/cases/${caseId}`}>
@@ -421,12 +433,12 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       </div>
 
       <div className="flex-1 overflow-hidden mt-4 mx-6 mb-6 grid grid-cols-12 gap-4">
-        <div className="col-span-4 border rounded-lg bg-white flex flex-col overflow-hidden">
+        <div className="col-span-4 border rounded-lg bg-card flex flex-col overflow-hidden">
           <div className="p-3 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <input
-                className="w-full border rounded-md py-2 pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full border rounded-md py-2 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 placeholder="Search events, symptoms, procedures..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -441,7 +453,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               </div>
             )}
             {!isGraphLoading && filteredEvents.length === 0 && (
-              <div className="text-sm text-muted-foreground p-2">
+              <div className="text-sm text-foreground/80 p-2">
                 No events available yet. Run analysis to populate Audit Mode.
               </div>
             )}
@@ -458,7 +470,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
                     <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
                   </div>
-                  <p className="text-xs mt-2 leading-relaxed">{e.summary}</p>
+                  <p className="text-xs mt-2 leading-relaxed text-foreground/90">{e.summary}</p>
                   <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
                     <span>{e.citations.length} citation(s)</span>
                     <span>Confidence {e.confidence}%</span>
@@ -470,7 +482,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
 
         <div className="col-span-8 grid grid-rows-[1.2fr_1fr] gap-4 min-h-0">
-          <div className="border rounded-lg bg-white flex flex-col overflow-hidden">
+          <div className="border rounded-lg bg-card flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">Record Packet Viewer</div>
@@ -488,7 +500,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                 </Button>
               )}
             </div>
-            <div className="flex-1 bg-slate-100">
+            <div className="flex-1 bg-muted/60">
               {viewerHref ? (
                 <iframe
                   title="Source document viewer"
@@ -503,7 +515,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             </div>
           </div>
 
-          <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="border rounded-lg bg-card overflow-hidden">
             <div className="px-4 py-3 border-b">
               <div className="text-sm font-semibold flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-amber-600" />
