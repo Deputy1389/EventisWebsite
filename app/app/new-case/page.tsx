@@ -85,9 +85,9 @@ export default function NewCasePage() {
       setIsDone(true);
       toast.success("Case created and file uploaded!");
       
-      // Auto-redirect after a short delay
+      // Auto-redirect into command center (Audit Mode)
       setTimeout(() => {
-        router.push(`/app/cases/${matterId}`);
+        router.push(`/app/cases/${matterId}/review`);
       }, 2000);
     } catch (error: unknown) {
       console.error("Upload error:", error);
@@ -113,13 +113,13 @@ export default function NewCasePage() {
           <CheckCircle2 className="h-10 w-10" />
         </div>
         <h2 className="text-3xl font-bold mb-4">Upload Complete</h2>
-        <p className="text-muted-foreground mb-8">
+          <p className="text-muted-foreground mb-8">
           &ldquo;{caseName}&rdquo; has been created and your records are uploaded.
-          <br />Redirecting you to case details...
+          <br />Redirecting you to Audit Mode...
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button asChild>
-            <Link href={`/app/cases/${newCaseId}`}>View Case Details</Link>
+            <Link href={`/app/cases/${newCaseId}/review`}>Open Audit Mode</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href="/app">Back to Dashboard</Link>

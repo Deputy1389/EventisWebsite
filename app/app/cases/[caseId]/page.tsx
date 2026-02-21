@@ -145,6 +145,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
 
         // Refresh runs
         fetchData();
+        router.push(`/app/cases/${caseId}/review`);
       } else {
         toast.error("Failed to upload document.");
       }
