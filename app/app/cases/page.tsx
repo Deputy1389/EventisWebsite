@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Download, ExternalLink, FileText, Loader2, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ type Matter = {
 
 export default function AllCasesPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [matters, setMatters] = useState<Matter[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -148,17 +150,13 @@ export default function AllCasesPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Matter Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link href={`/app/cases/${m.id}`}>
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              Open Matter
-                            </Link>
+                          <DropdownMenuItem onSelect={() => router.push(`/app/cases/${m.id}`)}>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open Matter
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/app/cases/${m.id}/review`}>
-                              <FileText className="mr-2 h-4 w-4" />
-                              Audit Mode
-                            </Link>
+                          <DropdownMenuItem onSelect={() => router.push(`/app/cases/${m.id}/review`)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Audit Mode
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => window.open(`/api/citeline/runs/latest/artifacts/pdf?matterId=${m.id}`, "_blank")}>
                             <Download className="mr-2 h-4 w-4" />
@@ -182,4 +180,3 @@ export default function AllCasesPage() {
     </div>
   );
 }
-
