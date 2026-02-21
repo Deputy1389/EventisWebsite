@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 
+
 import { auth } from "@/lib/auth";
 import { getServerApiUrl } from "@/lib/citeline";
 import { withServerAuthHeaders } from "@/lib/citeline-server";
+
+export const runtime = "nodejs";
 
 type RouteParams = {
   params: Promise<{ documentId: string }>;
