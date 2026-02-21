@@ -1,109 +1,500 @@
 "use client";
 
-import { use } from "react";
-import { ChevronLeft, FileText, Search, ShieldCheck, Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ExternalLink,
+  FileText,
+  GitBranch,
+  Loader2,
+  Scale,
+  Search,
+  ShieldAlert,
+} from "lucide-react";
 
-const mockEvents = [
-  { id: "1", date: "2023-01-15", type: "ED Visit", text: "Patient presented with severe back pain after MVA.", page: 42, confidence: 98 },
-  { id: "2", date: "2023-01-15", type: "Imaging", text: "CT Cervical Spine: No acute fracture, degenerative changes at C5-C6.", page: 48, confidence: 95 },
-  { id: "3", date: "2023-01-18", type: "Clinical", text: "Ortho eval: ROM limited in flexion. Prescribed physical therapy.", page: 112, confidence: 88 },
-];
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+type Run = {
+  id: string;
+  status: string;
+  started_at: string | null;
+  metrics?: {
+    events_total?: number;
+    providers_detected?: number;
+    pages_total?: number;
+    [key: string]: unknown;
+  } | null;
+};
+
+type Matter = {
+  id: string;
+  title: string;
+};
+
+type Document = {
+  id: string;
+  filename: string;
+};
+
+type CitationRecord = {
+  citation_id: string;
+  source_document_id: string;
+  page_number: number;
+  snippet?: string;
+};
+
+type EventRecord = {
+  event_id: string;
+  event_type?: string;
+  date?: { normalized?: string; original_text?: string } | null;
+  confidence?: number;
+  facts?: Array<{ text?: string }>;
+  source_page_numbers?: number[];
+  citation_ids?: string[];
+};
+
+type CommandCenterData = {
+  claimRows: Record<string, unknown>[];
+  causationChains: Record<string, unknown>[];
+  collapseCandidates: Record<string, unknown>[];
+  contradictionMatrix: Record<string, unknown>[];
+  narrativeDuality: Record<string, unknown> | null;
+  citationFidelity: Record<string, unknown> | null;
+};
+
+type AuditEvent = {
+  id: string;
+  dateLabel: string;
+  eventType: string;
+  summary: string;
+  confidence: number;
+  citations: CitationRecord[];
+  sourcePages: number[];
+};
+
+const SUCCESS_STATUSES = new Set(["success", "partial"]);
+
+function normalizeEventType(raw: string | undefined): string {
+  return (raw || "Encounter")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function pickSummary(e: EventRecord): string {
+  const fact = (e.facts || []).map((f) => (f?.text || "").trim()).find(Boolean);
+  if (!fact) return "No extracted summary for this event.";
+  return fact.length > 280 ? `${fact.slice(0, 277)}...` : fact;
+}
+
+function parseDateLabel(e: EventRecord): string {
+  const normalized = e.date?.normalized?.trim();
+  const original = e.date?.original_text?.trim();
+  return normalized || original || "Undated";
+}
 
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGraphLoading, setIsGraphLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [matter, setMatter] = useState<Matter | null>(null);
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [commandCenter, setCommandCenter] = useState<CommandCenterData>({
+    claimRows: [],
+    causationChains: [],
+    collapseCandidates: [],
+    contradictionMatrix: [],
+    narrativeDuality: null,
+    citationFidelity: null,
+  });
+
+  const [query, setQuery] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const latestRun = useMemo(
+    () => runs.find((r) => SUCCESS_STATUSES.has(r.status)) || null,
+    [runs],
+  );
+
+  const selectedEvent = useMemo(
+    () => events.find((e) => e.id === selectedEventId) || events[0] || null,
+    [events, selectedEventId],
+  );
+
+  const documentMap = useMemo(() => {
+    const map = new Map<string, Document>();
+    for (const d of documents) map.set(d.id, d);
+    return map;
+  }, [documents]);
+
+  const selectedCitation = selectedEvent?.citations?.[0] || null;
+  const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
+  const selectedPage = selectedCitation?.page_number || selectedEvent?.sourcePages?.[0] || null;
+  const viewerHref = selectedDocument
+    ? `/api/citeline/documents/${selectedDocument.id}/download${selectedPage ? `#page=${selectedPage}` : ""}`
+    : null;
+
+  const filteredEvents = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return events;
+    return events.filter((e) => {
+      const blob = `${e.dateLabel} ${e.eventType} ${e.summary}`.toLowerCase();
+      return blob.includes(q);
+    });
+  }, [events, query]);
+
+  const fetchCaseData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [matterRes, runsRes, docsRes] = await Promise.all([
+        fetch(`/api/citeline/matters/${caseId}`),
+        fetch(`/api/citeline/matters/${caseId}/runs`),
+        fetch(`/api/citeline/matters/${caseId}/documents`),
+      ]);
+
+      if (!matterRes.ok) throw new Error("Unable to load case details.");
+      if (!runsRes.ok) throw new Error("Unable to load runs.");
+      if (!docsRes.ok) throw new Error("Unable to load documents.");
+
+      const [matterJson, runsJson, docsJson] = await Promise.all([
+        matterRes.json(),
+        runsRes.json(),
+        docsRes.json(),
+      ]);
+
+      setMatter(matterJson);
+      setRuns(Array.isArray(runsJson) ? runsJson : []);
+      setDocuments(Array.isArray(docsJson) ? docsJson : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load Audit Mode.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [caseId]);
+
+  const fetchEvidenceGraph = useCallback(async (runId: string) => {
+    setIsGraphLoading(true);
+    try {
+      let res = await fetch(`/api/citeline/runs/${runId}/artifacts/by-name/evidence_graph.json`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        res = await fetch(`/api/citeline/runs/${runId}/artifacts/json`, {
+          cache: "no-store",
+        });
+      }
+      if (!res.ok) {
+        throw new Error(`Could not load evidence graph (${res.status}).`);
+      }
+
+      const payload = await res.json();
+      const graph = payload?.evidence_graph ?? payload;
+      const citations = Array.isArray(graph?.citations) ? (graph.citations as CitationRecord[]) : [];
+      const eventsRaw = Array.isArray(graph?.events) ? (graph.events as EventRecord[]) : [];
+      const ext = graph?.extensions || {};
+
+      const citationById = new Map<string, CitationRecord>();
+      for (const c of citations) {
+        if (c?.citation_id) citationById.set(c.citation_id, c);
+      }
+
+      const transformed = eventsRaw.map((e, idx) => {
+        const eventCitations = (e.citation_ids || [])
+          .map((id) => citationById.get(id))
+          .filter((c): c is CitationRecord => Boolean(c));
+
+        return {
+          id: e.event_id || `event-${idx}`,
+          dateLabel: parseDateLabel(e),
+          eventType: normalizeEventType(e.event_type),
+          summary: pickSummary(e),
+          confidence: Number.isFinite(e.confidence) ? Number(e.confidence) : 0,
+          citations: eventCitations,
+          sourcePages: Array.isArray(e.source_page_numbers) ? e.source_page_numbers : [],
+        } as AuditEvent;
+      });
+
+      transformed.sort((a, b) => `${a.dateLabel}|${a.id}`.localeCompare(`${b.dateLabel}|${b.id}`));
+      setEvents(transformed);
+      setSelectedEventId((prev) => prev || transformed[0]?.id || null);
+      setCommandCenter({
+        claimRows: Array.isArray(ext?.claim_rows) ? ext.claim_rows : [],
+        causationChains: Array.isArray(ext?.causation_chains) ? ext.causation_chains : [],
+        collapseCandidates: Array.isArray(ext?.case_collapse_candidates) ? ext.case_collapse_candidates : [],
+        contradictionMatrix: Array.isArray(ext?.contradiction_matrix) ? ext.contradiction_matrix : [],
+        narrativeDuality:
+          ext?.narrative_duality && typeof ext.narrative_duality === "object"
+            ? ext.narrative_duality
+            : null,
+        citationFidelity:
+          ext?.citation_fidelity && typeof ext.citation_fidelity === "object"
+            ? ext.citation_fidelity
+            : null,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load evidence data.");
+      setEvents([]);
+    } finally {
+      setIsGraphLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchCaseData();
+  }, [fetchCaseData]);
+
+  useEffect(() => {
+    if (!latestRun) return;
+    void fetchEvidenceGraph(latestRun.id);
+  }, [latestRun, fetchEvidenceGraph]);
+
+  useEffect(() => {
+    const hasActiveRuns = runs.some((r) => r.status === "pending" || r.status === "running");
+    if (!hasActiveRuns) return;
+    const timer = setInterval(() => {
+      void fetchCaseData();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [runs, fetchCaseData]);
+
+  if (isLoading) {
+    return (
+      <div className="h-[60vh] flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading Audit Mode...
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen flex flex-col -m-8 overflow-hidden">
-      {/* Header */}
-      <div className="h-14 border-b bg-background flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-4">
+    <div className="h-screen -m-8 flex flex-col bg-slate-50/40">
+      <div className="h-14 border-b bg-white px-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href={`/app/cases/${caseId}`}>
               <ChevronLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div className="h-4 w-px bg-border" />
-          <h1 className="text-sm font-bold flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Audit Mode: Smith v. State Farm
-          </h1>
+          <div className="flex items-center gap-2">
+            <Scale className="h-4 w-4 text-primary" />
+            <h1 className="text-sm font-semibold">Audit Mode: {matter?.title || "Case Review"}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px] uppercase">Drafting Ready</Badge>
-          <Button size="sm">Export Final DOCX</Button>
+          <Badge variant={latestRun ? "default" : "outline"} className="text-[10px] uppercase tracking-wide">
+            {latestRun ? "Verification Ready" : "Waiting For Run"}
+          </Badge>
+          {latestRun && (
+            <Button size="sm" asChild>
+              <a href={`/api/citeline/runs/${latestRun.id}/artifacts/docx`} target="_blank" rel="noreferrer">
+                Export DOCX
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Split View */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Extraction List */}
-        <div className="w-[450px] border-r bg-muted/10 flex flex-col shrink-0">
-          <div className="p-4 border-b bg-background/50">
+      {error && (
+        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="mx-6 mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Audit Events</div>
+            <div className="text-xl font-semibold">{events.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Claims</div>
+            <div className="text-xl font-semibold">{commandCenter.claimRows.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Causation Chains</div>
+            <div className="text-xl font-semibold">{commandCenter.causationChains.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Contradictions</div>
+            <div className="text-xl font-semibold">{commandCenter.contradictionMatrix.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex-1 overflow-hidden mt-4 mx-6 mb-6 grid grid-cols-12 gap-4">
+        <div className="col-span-4 border rounded-lg bg-white flex flex-col overflow-hidden">
+          <div className="p-3 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <input 
-                className="w-full bg-background border rounded-md py-2 pl-8 pr-4 text-xs focus:outline-none focus:ring-1 focus:ring-primary" 
-                placeholder="Search extracted facts..."
+              <input
+                className="w-full border rounded-md py-2 pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="Search events, symptoms, procedures..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
               />
             </div>
           </div>
-          
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-4">
-              {mockEvents.map((e) => (
-                <Card key={e.id} className="cursor-pointer hover:border-primary/50 transition-colors group">
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{e.date}</span>
-                      <Badge variant="secondary" className="text-[9px] h-4">{e.type}</Badge>
-                    </div>
-                    <p className="text-xs leading-relaxed line-clamp-2">{e.text}</p>
-                    <div className="pt-2 flex items-center justify-between">
-                      <span className="text-[10px] font-medium text-primary group-hover:underline flex items-center gap-1">
-                        <FileText className="h-3 w-3" /> Source p. {e.page}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <div className="h-1.5 w-12 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500" style={{ width: `${e.confidence}%` }} />
-                        </div>
-                        <span className="text-[9px] text-muted-foreground">{e.confidence}%</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {isGraphLoading && (
+              <div className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading event graph...
+              </div>
+            )}
+            {!isGraphLoading && filteredEvents.length === 0 && (
+              <div className="text-sm text-muted-foreground p-2">
+                No events available yet. Run analysis to populate Audit Mode.
+              </div>
+            )}
+            {filteredEvents.map((e) => {
+              const active = selectedEvent?.id === e.id;
+              return (
+                <button
+                  type="button"
+                  key={e.id}
+                  onClick={() => setSelectedEventId(e.id)}
+                  className={`w-full text-left border rounded-md p-3 transition ${active ? "border-primary bg-primary/5" : "hover:border-slate-300"}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
+                    <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
+                  </div>
+                  <p className="text-xs mt-2 leading-relaxed">{e.summary}</p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>{e.citations.length} citation(s)</span>
+                    <span>Confidence {e.confidence}%</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right: Document Viewer */}
-        <div className="flex-1 bg-muted/30 flex flex-col items-center justify-center p-12">
-          <div className="w-full max-w-2xl aspect-[1/1.4] bg-background shadow-2xl rounded-sm border flex flex-col items-center justify-center text-center p-8">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <FileText className="h-8 w-8 text-muted-foreground opacity-20" />
+        <div className="col-span-8 grid grid-rows-[1.2fr_1fr] gap-4 min-h-0">
+          <div className="border rounded-lg bg-white flex flex-col overflow-hidden">
+            <div className="px-4 py-3 border-b flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">Record Packet Viewer</div>
+                <div className="text-xs text-muted-foreground">
+                  {selectedDocument
+                    ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}`
+                    : "Select an event with citations to open the source packet"}
+                </div>
+              </div>
+              {viewerHref && (
+                <Button size="sm" variant="outline" asChild>
+                  <a href={viewerHref} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Source
+                  </a>
+                </Button>
+              )}
             </div>
-            <h3 className="font-bold text-lg mb-2">Source Document Preview</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              This area will host the high-fidelity PDF viewer, auto-scrolling to the relevant page and bounding box when an event is selected.
-            </p>
-            <div className="mt-8 flex gap-2">
-              <div className="h-2 w-32 bg-muted rounded animate-pulse" />
-              <div className="h-2 w-48 bg-muted rounded animate-pulse" />
-            </div>
-            <div className="mt-2 flex gap-2">
-              <div className="h-2 w-40 bg-muted rounded animate-pulse" />
-              <div className="h-2 w-24 bg-muted rounded animate-pulse" />
+            <div className="flex-1 bg-slate-100">
+              {viewerHref ? (
+                <iframe
+                  title="Source document viewer"
+                  src={viewerHref}
+                  className="w-full h-full border-0"
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4 mr-2" /> No source document selected.
+                </div>
+              )}
             </div>
           </div>
-          
-          {/* Helper overlay */}
-          <div className="mt-8 bg-primary/90 text-primary-foreground px-4 py-2 rounded-full text-[10px] font-medium flex items-center gap-2 shadow-lg">
-            <Info className="h-3 w-3" />
-            Click an event on the left to verify the source text instantly.
+
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b">
+              <div className="text-sm font-semibold flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4 text-amber-600" />
+                Command Center Signals
+              </div>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-4 text-xs overflow-y-auto max-h-[260px]">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" /> Causation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  {commandCenter.causationChains.slice(0, 3).map((row, i) => (
+                    <div key={`cause-${i}`} className="border rounded p-2">
+                      <div className="font-medium">{String(row["body_region"] || "General")}</div>
+                      <div className="text-muted-foreground">Integrity: {String(row["chain_integrity_score"] ?? "n/a")}</div>
+                    </div>
+                  ))}
+                  {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation chain output.</div>}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Case Collapse</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  {commandCenter.collapseCandidates.slice(0, 3).map((row, i) => (
+                    <div key={`collapse-${i}`} className="border rounded p-2">
+                      <div className="font-medium">{String(row["fragility_type"] || "Unknown")}</div>
+                      <div className="text-muted-foreground">Score: {String(row["fragility_score"] ?? "n/a")}</div>
+                    </div>
+                  ))}
+                  {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No collapse candidates.</div>}
+                </CardContent>
+              </Card>
+
+              <Card className="col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs">Selected Event Citations</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {(selectedEvent?.citations || []).length === 0 && (
+                    <div className="text-muted-foreground">No direct citations linked for this event.</div>
+                  )}
+                  {(selectedEvent?.citations || []).slice(0, 8).map((c) => {
+                    const doc = documentMap.get(c.source_document_id);
+                    const href = doc
+                      ? `/api/citeline/documents/${doc.id}/download#page=${c.page_number}`
+                      : null;
+                    return (
+                      <div key={c.citation_id} className="border rounded p-2 flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium">
+                            {doc?.filename || c.source_document_id} p. {c.page_number}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {(c.snippet || "No snippet available.").slice(0, 220)}
+                          </div>
+                        </div>
+                        {href && (
+                          <Button size="sm" variant="ghost" asChild>
+                            <a href={href} target="_blank" rel="noreferrer">
+                              Open
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
