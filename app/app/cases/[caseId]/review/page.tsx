@@ -149,6 +149,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const [query, setQuery] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [isReprocessing, setIsReprocessing] = useState(false);
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
@@ -299,6 +300,25 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     }
   }, []);
 
+  const triggerReprocess = useCallback(async () => {
+    setIsReprocessing(true);
+    try {
+      const res = await fetch(`/api/citeline/matters/${caseId}/runs`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to start new run");
+      }
+      setError("Reprocessing started. This page will update automatically once extraction completes.");
+      await fetchCaseData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to start reprocessing.");
+    } finally {
+      setIsReprocessing(false);
+    }
+  }, [caseId, fetchCaseData]);
+
   useEffect(() => {
     void fetchCaseData();
   }, [fetchCaseData]);
@@ -357,7 +377,19 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
       {error && (
         <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+          <div className="flex items-center justify-between gap-3">
+            <span>{error}</span>
+            <Button size="sm" variant="outline" onClick={() => void triggerReprocess()} disabled={isReprocessing}>
+              {isReprocessing ? (
+                <>
+                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                "Re-run with latest exporter"
+              )}
+            </Button>
+          </div>
         </div>
       )}
 
