@@ -76,7 +76,13 @@ type AuditEvent = {
   sourcePages: number[];
 };
 
-const SUCCESS_STATUSES = new Set(["success", "partial"]);
+type EvidenceGraphLike = {
+  events?: EventRecord[];
+  citations?: CitationRecord[];
+  extensions?: Record<string, unknown>;
+};
+
+const SUCCESS_STATUSES = new Set(["success", "partial", "completed"]);
 
 function normalizeEventType(raw: string | undefined): string {
   return (raw || "Encounter")
@@ -94,6 +100,30 @@ function parseDateLabel(e: EventRecord): string {
   const normalized = e.date?.normalized?.trim();
   const original = e.date?.original_text?.trim();
   return normalized || original || "Undated";
+}
+
+function extractGraphPayload(payload: unknown): EvidenceGraphLike | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+
+  if (Array.isArray(p.events)) {
+    return p as EvidenceGraphLike;
+  }
+
+  if (p.evidence_graph && typeof p.evidence_graph === "object") {
+    const graph = p.evidence_graph as Record<string, unknown>;
+    if (Array.isArray(graph.events)) return graph as EvidenceGraphLike;
+  }
+
+  if (p.outputs && typeof p.outputs === "object") {
+    const outputs = p.outputs as Record<string, unknown>;
+    if (outputs.evidence_graph && typeof outputs.evidence_graph === "object") {
+      const graph = outputs.evidence_graph as Record<string, unknown>;
+      if (Array.isArray(graph.events)) return graph as EvidenceGraphLike;
+    }
+  }
+
+  return null;
 }
 
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
@@ -120,10 +150,12 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [query, setQuery] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  const latestRun = useMemo(
-    () => runs.find((r) => SUCCESS_STATUSES.has(r.status)) || null,
+  const completedRuns = useMemo(
+    () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
     [runs],
   );
+
+  const latestRun = completedRuns[0] || null;
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) || events[0] || null,
@@ -182,65 +214,83 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     }
   }, [caseId]);
 
-  const fetchEvidenceGraph = useCallback(async (runId: string) => {
+  const fetchEvidenceGraph = useCallback(async (runIds: string[]) => {
     setIsGraphLoading(true);
+    setError(null);
     try {
-      let res = await fetch(`/api/citeline/runs/${runId}/artifacts/by-name/evidence_graph.json`, {
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        res = await fetch(`/api/citeline/runs/${runId}/artifacts/json`, {
+      for (const runId of runIds) {
+        let res = await fetch(`/api/citeline/runs/${runId}/artifacts/by-name/evidence_graph.json`, {
           cache: "no-store",
         });
+        if (!res.ok) {
+          res = await fetch(`/api/citeline/runs/${runId}/artifacts/json`, {
+            cache: "no-store",
+          });
+        }
+        if (!res.ok) continue;
+
+        const payload = await res.json();
+        const graph = extractGraphPayload(payload);
+        if (!graph || !Array.isArray(graph.events) || graph.events.length === 0) continue;
+
+        const citations = Array.isArray(graph.citations) ? graph.citations : [];
+        const eventsRaw = graph.events;
+        const ext =
+          graph.extensions && typeof graph.extensions === "object"
+            ? (graph.extensions as Record<string, unknown>)
+            : {};
+
+        const citationById = new Map<string, CitationRecord>();
+        for (const c of citations) {
+          if (c?.citation_id) citationById.set(c.citation_id, c);
+        }
+
+        const transformed = eventsRaw.map((e, idx) => {
+          const eventCitations = (e.citation_ids || [])
+            .map((id) => citationById.get(id))
+            .filter((c): c is CitationRecord => Boolean(c));
+
+          return {
+            id: e.event_id || `event-${idx}`,
+            dateLabel: parseDateLabel(e),
+            eventType: normalizeEventType(e.event_type),
+            summary: pickSummary(e),
+            confidence: Number.isFinite(e.confidence) ? Number(e.confidence) : 0,
+            citations: eventCitations,
+            sourcePages: Array.isArray(e.source_page_numbers) ? e.source_page_numbers : [],
+          } as AuditEvent;
+        });
+
+        transformed.sort((a, b) => `${a.dateLabel}|${a.id}`.localeCompare(`${b.dateLabel}|${b.id}`));
+        setEvents(transformed);
+        setSelectedEventId((prev) => prev || transformed[0]?.id || null);
+        setCommandCenter({
+          claimRows: Array.isArray(ext?.claim_rows) ? ext.claim_rows : [],
+          causationChains: Array.isArray(ext?.causation_chains) ? ext.causation_chains : [],
+          collapseCandidates: Array.isArray(ext?.case_collapse_candidates) ? ext.case_collapse_candidates : [],
+          contradictionMatrix: Array.isArray(ext?.contradiction_matrix) ? ext.contradiction_matrix : [],
+          narrativeDuality:
+            ext?.narrative_duality && typeof ext.narrative_duality === "object"
+              ? (ext.narrative_duality as Record<string, unknown>)
+              : null,
+          citationFidelity:
+            ext?.citation_fidelity && typeof ext.citation_fidelity === "object"
+              ? (ext.citation_fidelity as Record<string, unknown>)
+              : null,
+        });
+        return;
       }
-      if (!res.ok) {
-        throw new Error(`Could not load evidence graph (${res.status}).`);
-      }
 
-      const payload = await res.json();
-      const graph = payload?.evidence_graph ?? payload;
-      const citations = Array.isArray(graph?.citations) ? (graph.citations as CitationRecord[]) : [];
-      const eventsRaw = Array.isArray(graph?.events) ? (graph.events as EventRecord[]) : [];
-      const ext = graph?.extensions || {};
-
-      const citationById = new Map<string, CitationRecord>();
-      for (const c of citations) {
-        if (c?.citation_id) citationById.set(c.citation_id, c);
-      }
-
-      const transformed = eventsRaw.map((e, idx) => {
-        const eventCitations = (e.citation_ids || [])
-          .map((id) => citationById.get(id))
-          .filter((c): c is CitationRecord => Boolean(c));
-
-        return {
-          id: e.event_id || `event-${idx}`,
-          dateLabel: parseDateLabel(e),
-          eventType: normalizeEventType(e.event_type),
-          summary: pickSummary(e),
-          confidence: Number.isFinite(e.confidence) ? Number(e.confidence) : 0,
-          citations: eventCitations,
-          sourcePages: Array.isArray(e.source_page_numbers) ? e.source_page_numbers : [],
-        } as AuditEvent;
-      });
-
-      transformed.sort((a, b) => `${a.dateLabel}|${a.id}`.localeCompare(`${b.dateLabel}|${b.id}`));
-      setEvents(transformed);
-      setSelectedEventId((prev) => prev || transformed[0]?.id || null);
+      setEvents([]);
       setCommandCenter({
-        claimRows: Array.isArray(ext?.claim_rows) ? ext.claim_rows : [],
-        causationChains: Array.isArray(ext?.causation_chains) ? ext.causation_chains : [],
-        collapseCandidates: Array.isArray(ext?.case_collapse_candidates) ? ext.case_collapse_candidates : [],
-        contradictionMatrix: Array.isArray(ext?.contradiction_matrix) ? ext.contradiction_matrix : [],
-        narrativeDuality:
-          ext?.narrative_duality && typeof ext.narrative_duality === "object"
-            ? ext.narrative_duality
-            : null,
-        citationFidelity:
-          ext?.citation_fidelity && typeof ext.citation_fidelity === "object"
-            ? ext.citation_fidelity
-            : null,
+        claimRows: [],
+        causationChains: [],
+        collapseCandidates: [],
+        contradictionMatrix: [],
+        narrativeDuality: null,
+        citationFidelity: null,
       });
+      setError("No extracted event graph found for completed runs. Re-run extraction or check artifact availability.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load evidence data.");
       setEvents([]);
@@ -254,9 +304,9 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   }, [fetchCaseData]);
 
   useEffect(() => {
-    if (!latestRun) return;
-    void fetchEvidenceGraph(latestRun.id);
-  }, [latestRun, fetchEvidenceGraph]);
+    if (completedRuns.length === 0) return;
+    void fetchEvidenceGraph(completedRuns.map((r) => r.id));
+  }, [completedRuns, fetchEvidenceGraph]);
 
   useEffect(() => {
     const hasActiveRuns = runs.some((r) => r.status === "pending" || r.status === "running");
