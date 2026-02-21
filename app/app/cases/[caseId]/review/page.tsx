@@ -252,6 +252,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [selectedCitationId, setSelectedCitationId] = useState<string | null>(null);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [viewerEnabled, setViewerEnabled] = useState(false);
+  const [viewerMode, setViewerMode] = useState<"source" | "chronology">("source");
+  const [viewerKey, setViewerKey] = useState(0);
   const [mobilePane, setMobilePane] = useState<"events" | "viewer">("events");
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [docPageCounts, setDocPageCounts] = useState<Record<string, number>>({});
@@ -290,9 +292,11 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
   const selectedPage = selectedCitation?.page_number || null;
   const selectedDocumentPages = selectedDocument ? docPageCounts[selectedDocument.id] || null : null;
-  const viewerHref = selectedDocument
-    ? `/api/citeline/documents/${selectedDocument.id}/download${selectedPage ? `#page=${selectedPage}` : ""}`
-    : null;
+  const viewerHref = viewerMode === "chronology" && latestRun
+    ? `/api/citeline/runs/${latestRun.id}/artifacts/pdf`
+    : selectedDocument
+      ? `/api/citeline/documents/${selectedDocument.id}/download?v=${viewerKey}${selectedPage ? `#page=${selectedPage}` : ""}`
+      : null;
 
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -528,6 +532,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     if (selectedEvent?.citations?.length) {
       setSelectedCitationId(selectedEvent.citations[0].citation_id);
       setViewerEnabled(true);
+      setViewerMode("source");
+      setViewerKey((k) => k + 1);
       return;
     }
     setViewerEnabled(false);
@@ -546,6 +552,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     if (!exists) {
       setSelectedCitationId(selectedEvent.citations[0]?.citation_id || null);
     }
+    setViewerKey((k) => k + 1);
   }, [selectedEvent, selectedCitationId]);
 
   const focusCitation = useCallback((citationId: string) => {
@@ -555,6 +562,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       setSelectedEventId(event.id);
       setSelectedCitationId(citationId);
       setViewerEnabled(true);
+      setViewerMode("source");
+      setViewerKey((k) => k + 1);
       setMobilePane("viewer");
       return;
     }
@@ -730,6 +739,22 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button size="sm" variant={viewerMode === "source" ? "default" : "outline"} onClick={() => {
+                  setViewerMode("source");
+                  setViewerEnabled(true);
+                  setViewerKey((k) => k + 1);
+                }}>
+                  Source Packet
+                </Button>
+                {latestRun && (
+                  <Button size="sm" variant={viewerMode === "chronology" ? "default" : "outline"} onClick={() => {
+                    setViewerMode("chronology");
+                    setViewerEnabled(true);
+                    setViewerKey((k) => k + 1);
+                  }}>
+                    Chronology PDF
+                  </Button>
+                )}
                 {viewerHref && (
                   <Button size="sm" onClick={() => setViewerEnabled((v) => !v)}>
                     {viewerEnabled ? "Pause Preview" : "Load Preview"}
@@ -750,7 +775,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             </div>
             <div className="flex-1 bg-muted/60 min-h-[320px]">
               {viewerHref && viewerEnabled ? (
-                <iframe title="Source document viewer" src={viewerHref} className="w-full h-full border-0" />
+                <iframe key={viewerKey} title="Source document viewer" src={viewerHref} className="w-full h-full border-0" />
               ) : viewerHref ? (
                 <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
                   <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
