@@ -3,6 +3,8 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ChevronsDown,
+  ChevronsUp,
   ChevronLeft,
   ExternalLink,
   FileText,
@@ -14,7 +16,6 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Run = {
@@ -249,6 +250,9 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [selectedCitationId, setSelectedCitationId] = useState<string | null>(null);
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [viewerEnabled, setViewerEnabled] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"events" | "viewer">("events");
+  const [dockCollapsed, setDockCollapsed] = useState(false);
+  const [docPageCounts, setDocPageCounts] = useState<Record<string, number>>({});
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
@@ -283,6 +287,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
   const selectedPage = selectedCitation?.page_number || null;
+  const selectedDocumentPages = selectedDocument ? docPageCounts[selectedDocument.id] || null : null;
   const viewerHref = selectedDocument
     ? `/api/citeline/documents/${selectedDocument.id}/download${selectedPage ? `#page=${selectedPage}` : ""}`
     : null;
@@ -360,6 +365,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           localByDoc.set(docId, local);
           globalToLocalPage.set(Number(p.page_number), local);
         }
+        setDocPageCounts(Object.fromEntries(localByDoc.entries()));
 
         const citationById = new Map<string, CitationRecord>();
         const citationIdsByGlobalPage = new Map<number, string[]>();
@@ -456,6 +462,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       }
 
       setEvents([]);
+      setDocPageCounts({});
       setCommandCenter({
         claimRows: [],
         causationChains: [],
@@ -513,8 +520,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   }, [runs, fetchCaseData]);
 
   useEffect(() => {
+    if (selectedEvent?.citations?.length) {
+      setSelectedCitationId(selectedEvent.citations[0].citation_id);
+      setViewerEnabled(true);
+      return;
+    }
     setViewerEnabled(false);
-  }, [selectedEventId]);
+  }, [selectedEvent]);
 
   useEffect(() => {
     if (!selectedEvent) {
@@ -538,9 +550,39 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       setSelectedEventId(event.id);
       setSelectedCitationId(citationId);
       setViewerEnabled(true);
+      setMobilePane("viewer");
       return;
     }
   }, [events]);
+
+  const contradictionCountByEvent = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const event of events) {
+      const eventCitationSet = new Set(event.citations.map((c) => c.citation_id));
+      let count = 0;
+      for (const row of commandCenter.contradictionMatrix) {
+        const rowCitations = new Set(collectCitationIds(row));
+        let overlap = false;
+        for (const cid of rowCitations) {
+          if (eventCitationSet.has(cid)) {
+            overlap = true;
+            break;
+          }
+        }
+        if (overlap) count += 1;
+      }
+      map.set(event.id, count);
+    }
+    return map;
+  }, [commandCenter.contradictionMatrix, events]);
+
+  const matterTitle = matter?.title || "Untitled Matter";
+  const packetFilename = documents[0]?.filename || "No packet";
+  const packetPages = Number(latestRun?.metrics?.pages_total || 0);
+  const anchoredEvents = events.filter((e) => e.citations.length > 0).length;
+  const citationCoverage = events.length ? Math.round((anchoredEvents / events.length) * 100) : 0;
+  const auditScoreRaw = latestRun?.metrics?.audit_score;
+  const auditScore = typeof auditScoreRaw === "number" ? String(Math.round(auditScoreRaw)) : "N/A";
 
   if (isLoading) {
     return (
@@ -553,7 +595,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   return (
     <div className="h-screen -m-8 flex flex-col bg-background text-foreground">
-      <div className="h-14 border-b bg-card px-6 flex items-center justify-between">
+      <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href={`/app/cases/${caseId}`}>
@@ -561,9 +603,17 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             </Link>
           </Button>
           <div className="h-4 w-px bg-border" />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <Scale className="h-4 w-4 text-primary" />
-            <h1 className="text-sm font-semibold">Audit Mode: {matter?.title || "Case Review"}</h1>
+            <h1 className="text-sm font-semibold truncate">Audit Mode: {matterTitle}</h1>
+          </div>
+          <div className="hidden xl:flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Badge variant="outline">{packetFilename}</Badge>
+            <Badge variant="outline">{packetPages || "?"} pages</Badge>
+            <Badge variant="outline">Anchored {anchoredEvents}</Badge>
+            <Badge variant="outline">Claim Candidates {commandCenter.claimRows.length}</Badge>
+            <Badge variant="outline">Coverage {citationCoverage}%</Badge>
+            <Badge variant="outline">Audit Score {auditScore}</Badge>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -598,22 +648,26 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
       )}
 
-      <div className="mx-6 mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Audit Events</div><div className="text-xl font-semibold">{events.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Claims</div><div className="text-xl font-semibold">{commandCenter.claimRows.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Causation Chains</div><div className="text-xl font-semibold">{commandCenter.causationChains.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Contradictions</div><div className="text-xl font-semibold">{commandCenter.contradictionMatrix.length}</div></CardContent></Card>
-      </div>
-      <div className="mx-6 mt-3 grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Case Collapse</div><div className="text-xl font-semibold">{commandCenter.collapseCandidates.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Defense Paths</div><div className="text-xl font-semibold">{commandCenter.defenseAttackPaths.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Objection Profiles</div><div className="text-xl font-semibold">{commandCenter.objectionProfiles.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Evidence Upgrades</div><div className="text-xl font-semibold">{commandCenter.evidenceUpgradeRecommendations.length}</div></CardContent></Card>
-        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Quote Locks</div><div className="text-xl font-semibold">{commandCenter.quoteLockRows.length}</div></CardContent></Card>
+      <div className="mx-6 mt-3 space-y-2">
+        {events.length > 0 && commandCenter.claimRows.length === 0 && (
+          <div className="rounded-md border border-amber-300/50 bg-amber-500/10 px-3 py-2 text-sm">
+            Events extracted. Promote an event to create a Claim.
+          </div>
+        )}
+        {events.length > 0 && anchoredEvents === 0 && (
+          <div className="rounded-md border border-red-300/50 bg-red-500/10 px-3 py-2 text-sm">
+            Citation anchoring incomplete. Review extraction settings.
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-hidden mt-4 mx-6 mb-6 grid grid-cols-12 gap-4">
-        <div className="col-span-4 border rounded-lg bg-card flex flex-col overflow-hidden">
+      <div className="mx-6 mt-3 flex gap-2 [@media(min-width:1100px)]:hidden">
+        <Button size="sm" variant={mobilePane === "events" ? "default" : "outline"} onClick={() => setMobilePane("events")}>Events</Button>
+        <Button size="sm" variant={mobilePane === "viewer" ? "default" : "outline"} onClick={() => setMobilePane("viewer")}>Viewer</Button>
+      </div>
+
+      <div className={`flex-1 overflow-hidden mt-3 mx-6 ${selectedEvent ? "mb-2" : "mb-6"} grid [@media(min-width:1100px)]:grid-cols-[35%_65%] gap-4`}>
+        <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "viewer" ? "hidden [@media(min-width:1100px)]:flex" : "flex"}`}>
           <div className="p-3 border-b">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -636,6 +690,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             )}
             {filteredEvents.map((e) => {
               const active = selectedEvent?.id === e.id;
+              const contradictionCount = contradictionCountByEvent.get(e.id) || 0;
               return (
                 <button
                   type="button"
@@ -645,12 +700,15 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
-                    <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
+                      {contradictionCount > 0 && <Badge variant="destructive" className="text-[9px]">Conflicts {contradictionCount}</Badge>}
+                    </div>
                   </div>
-                  <p className="text-xs mt-2 leading-relaxed">{e.summary}</p>
+                  <p className="text-xs mt-2 leading-relaxed line-clamp-2">{e.summary}</p>
                   <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>{e.citations.length} citation(s)</span>
-                    <span>Confidence {e.confidence}%</span>
+                    <span>{e.citations.length} cites</span>
+                    <span>{e.id}</span>
                   </div>
                 </button>
               );
@@ -658,234 +716,133 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           </div>
         </div>
 
-        <div className="col-span-8 grid grid-rows-[1.05fr_1.35fr] gap-4 min-h-0">
-          <div className="border rounded-lg bg-card flex flex-col overflow-hidden">
+        <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "events" ? "hidden [@media(min-width:1100px)]:flex" : "flex"} min-h-0`}>
             <div className="px-4 py-3 border-b flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">Record Packet Viewer</div>
                 <div className="text-xs text-muted-foreground">
-                  {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}` : "Select an event or signal citation to open the source packet"}
+                  {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}` : "Select an event with citations to open the source packet"}
                 </div>
               </div>
-              {viewerHref && (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => setViewerEnabled((v) => !v)}>
-                    {viewerEnabled ? "Hide Preview" : "Load Preview"}
+              <div className="flex items-center gap-2">
+                {viewerHref && (
+                  <Button size="sm" onClick={() => setViewerEnabled((v) => !v)}>
+                    {viewerEnabled ? "Pause Preview" : "Load Preview"}
                   </Button>
+                )}
+                {viewerHref && (
                   <Button size="sm" variant="outline" asChild>
                     <a href={viewerHref} target="_blank" rel="noreferrer">
                       <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Source
                     </a>
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-            <div className="flex-1 bg-muted/60">
+            <div className="px-4 py-2 border-b text-xs text-muted-foreground flex items-center justify-between">
+              <span>{selectedPage ? `Page ${selectedPage}` : "No page selected"}</span>
+              <span>{selectedDocumentPages ? `${selectedPage || 1}/${selectedDocumentPages}` : "--/--"}</span>
+            </div>
+            <div className="flex-1 bg-muted/60 min-h-[320px]">
               {viewerHref && viewerEnabled ? (
                 <iframe title="Source document viewer" src={viewerHref} className="w-full h-full border-0" />
               ) : viewerHref ? (
                 <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4 mr-2" /> Preview is paused. Click Load Preview when needed.
+                  <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
+                    <FileText className="h-4 w-4 mr-2" /> Preview paused. Click Load Preview.
+                  </div>
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4 mr-2" /> No source document selected.
+                  <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
+                    <FileText className="h-4 w-4 mr-2" /> Select an event to jump to source citation.
+                  </div>
                 </div>
               )}
             </div>
           </div>
+      </div>
 
-          <div className="border rounded-lg bg-card overflow-hidden min-h-0">
-            <div className="px-4 py-3 border-b">
-              <div className="text-sm font-semibold flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-amber-600" />
-                Command Center Signals
-              </div>
+      {selectedEvent && (
+        <div className={`mx-6 mb-6 border rounded-lg bg-card overflow-hidden ${dockCollapsed ? "h-12" : "h-[300px]"}`}>
+          <div className="h-12 px-4 border-b flex items-center justify-between">
+            <div className="text-sm font-semibold flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-600" />
+              Context Dock
             </div>
-            <Tabs defaultValue="overview" className="h-full">
-              <TabsList className="mx-4 mt-3 grid grid-cols-3 md:grid-cols-7 w-auto">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="claims">Claims</TabsTrigger>
-                <TabsTrigger value="causation">Causation</TabsTrigger>
-                <TabsTrigger value="collapse">Collapse</TabsTrigger>
-                <TabsTrigger value="contradictions">Contradictions</TabsTrigger>
-                <TabsTrigger value="narrative">Narrative</TabsTrigger>
-                <TabsTrigger value="defense">Defense</TabsTrigger>
+            <Button size="sm" variant="ghost" onClick={() => setDockCollapsed((v) => !v)}>
+              {dockCollapsed ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
+            </Button>
+          </div>
+          {!dockCollapsed && (
+            <Tabs defaultValue="claim" className="h-[calc(100%-48px)]">
+              <TabsList className="mx-4 mt-2 grid grid-cols-5">
+                <TabsTrigger value="claim">Claim ({commandCenter.claimRows.length})</TabsTrigger>
+                <TabsTrigger value="causation">Causation ({commandCenter.causationChains.length})</TabsTrigger>
+                <TabsTrigger value="contradictions">Contradictions ({commandCenter.contradictionMatrix.length})</TabsTrigger>
+                <TabsTrigger value="defense">Defense ({commandCenter.defenseAttackPaths.length})</TabsTrigger>
+                <TabsTrigger value="collapse">Collapse ({commandCenter.collapseCandidates.length})</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <Card><CardContent className="p-3"><div className="text-muted-foreground">Claim Rows</div><div className="text-lg font-semibold">{commandCenter.claimRows.length}</div></CardContent></Card>
-                  <Card><CardContent className="p-3"><div className="text-muted-foreground">Citation Fidelity</div><div className="text-lg font-semibold">{commandCenter.citationFidelity ? "Ready" : "Missing"}</div></CardContent></Card>
-                </div>
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-xs">Selected Event Citations</CardTitle></CardHeader>
-                  <CardContent className="space-y-2">
-                    {(selectedEvent?.citations || []).length === 0 && (
-                      <div className="text-muted-foreground">No direct citations linked for this event.</div>
-                    )}
-                    {(selectedEvent?.citations || []).slice(0, 12).map((c) => {
-                      const doc = documentMap.get(c.source_document_id);
-                      const href = doc ? `/api/citeline/documents/${doc.id}/download#page=${c.page_number}` : null;
-                      return (
-                        <div key={c.citation_id} className="border rounded p-2 flex items-start justify-between gap-2">
-                          <div>
-                            <div className="font-medium">{doc?.filename || c.source_document_id} p. {c.page_number}</div>
-                            <div className="text-muted-foreground">{(c.snippet || "No snippet available.").slice(0, 220)}</div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button size="sm" variant="secondary" onClick={() => { setSelectedCitationId(c.citation_id); setViewerEnabled(true); }}>
-                              Preview
-                            </Button>
-                            {href && (
-                              <Button size="sm" variant="ghost" asChild>
-                                <a href={href} target="_blank" rel="noreferrer">Open</a>
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="claims" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
-                {commandCenter.claimRows.length === 0 && <div className="text-muted-foreground">No claim rows found in this run.</div>}
-                {commandCenter.claimRows.map((row, idx) => {
+              <TabsContent value="claim" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
+                {commandCenter.claimRows.length === 0 && <div className="text-muted-foreground">No claim candidates yet.</div>}
+                {commandCenter.claimRows.slice(0, 12).map((row, idx) => {
                   const citationIds = collectCitationIds(row);
                   return (
-                    <div key={`claim-${idx}`} className="border rounded-md p-3">
-                      <div className="flex items-center justify-between gap-2">
+                    <div key={`dock-claim-${idx}`} className="border rounded-md p-2 flex items-start justify-between gap-3">
+                      <div>
                         <div className="font-medium">{textFrom(row, ["claim_type"], "Claim")}</div>
-                        <div className="text-muted-foreground">{textFrom(row, ["date"], "Undated")}</div>
+                        <div className="text-muted-foreground">{textFrom(row, ["assertion", "summary"], "No details.")}</div>
                       </div>
-                      <div className="text-muted-foreground mt-1">{textFrom(row, ["body_region", "provider"], "General")}</div>
-                      <div className="mt-2 leading-relaxed">{textFrom(row, ["assertion", "claim_text", "summary"], "No claim text available.")}</div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <div className="text-muted-foreground">Support: {textFrom(row, ["support_score", "support_strength"], "n/a")}</div>
-                        {citationIds[0] && (
-                          <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>
-                            Open Citation
-                          </Button>
-                        )}
-                      </div>
+                      {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
                     </div>
                   );
                 })}
               </TabsContent>
 
-              <TabsContent value="causation" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
-                {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation chain output.</div>}
-                {commandCenter.causationChains.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  const rungs = Array.isArray(row.rungs) ? row.rungs.length : 0;
-                  return (
-                    <div key={`cause-${idx}`} className="border rounded-md p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{textFrom(row, ["body_region"], "General")}</div>
-                        <Badge variant="secondary">Integrity {textFrom(row, ["chain_integrity_score"], "n/a")}</Badge>
-                      </div>
-                      <div className="mt-1 text-muted-foreground">{rungs} rung(s) in chain</div>
-                      <div className="mt-2">{textFrom(row, ["causation_thesis", "summary"], "No causation summary.")}</div>
-                      {citationIds[0] && <Button className="mt-2" size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Open Citation</Button>}
-                    </div>
-                  );
-                })}
+              <TabsContent value="causation" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
+                {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation signals for this selection.</div>}
+                {commandCenter.causationChains.map((row, idx) => (
+                  <div key={`dock-causation-${idx}`} className="border rounded-md p-2">
+                    <div className="font-medium">{textFrom(row, ["body_region"], "General")}</div>
+                    <div className="text-muted-foreground">{textFrom(row, ["causation_thesis", "summary"], "No details.")}</div>
+                  </div>
+                ))}
               </TabsContent>
 
-              <TabsContent value="collapse" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
-                {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No case collapse candidates.</div>}
-                {commandCenter.collapseCandidates.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  return (
-                    <div key={`collapse-${idx}`} className="border rounded-md p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-medium">{textFrom(row, ["fragility_type", "title"], "Fragility Candidate")}</div>
-                        <Badge variant="secondary">Score {textFrom(row, ["fragility_score", "risk_score"], "n/a")}</Badge>
-                      </div>
-                      <div className="mt-2">{textFrom(row, ["argument", "reasoning", "summary"], "No details available.")}</div>
-                      {citationIds[0] && <Button className="mt-2" size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Open Citation</Button>}
-                    </div>
-                  );
-                })}
+              <TabsContent value="contradictions" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
+                {commandCenter.contradictionMatrix.length === 0 && <div className="text-muted-foreground">No contradictions detected.</div>}
+                {commandCenter.contradictionMatrix.map((row, idx) => (
+                  <div key={`dock-contradiction-${idx}`} className="border rounded-md p-2">
+                    <div className="font-medium">{textFrom(row, ["category", "contradiction_type"], "Contradiction")}</div>
+                    <div className="text-muted-foreground">{textFrom(row, ["description", "analysis"], "No details.")}</div>
+                  </div>
+                ))}
               </TabsContent>
 
-              <TabsContent value="contradictions" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-2">
-                {commandCenter.contradictionMatrix.length === 0 && <div className="text-muted-foreground">No contradiction matrix output.</div>}
-                {commandCenter.contradictionMatrix.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  return (
-                    <div key={`contra-${idx}`} className="border rounded-md p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-medium">{textFrom(row, ["contradiction_type", "label", "category"], "Contradiction")}</div>
-                        <Badge variant="secondary">{textFrom(row, ["severity", "materiality", "risk"], "n/a")}</Badge>
-                      </div>
-                      <div className="mt-2">{textFrom(row, ["description", "analysis", "summary"], "No contradiction description.")}</div>
-                      {citationIds[0] && <Button className="mt-2" size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Open Citation</Button>}
-                    </div>
-                  );
-                })}
+              <TabsContent value="defense" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
+                {(commandCenter.defenseAttackPaths.length + commandCenter.objectionProfiles.length) === 0 && <div className="text-muted-foreground">No defense signals available.</div>}
+                {commandCenter.defenseAttackPaths.map((row, idx) => (
+                  <div key={`dock-defense-${idx}`} className="border rounded-md p-2">
+                    <div className="font-medium">{textFrom(row, ["attack", "attack_vector", "title"], "Defense Path")}</div>
+                    <div className="text-muted-foreground">{textFrom(row, ["path", "description", "summary"], "No details.")}</div>
+                  </div>
+                ))}
               </TabsContent>
 
-              <TabsContent value="narrative" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-3">
-                {!commandCenter.narrativeDuality && <div className="text-muted-foreground">No narrative duality output.</div>}
-                {commandCenter.narrativeDuality && (
-                  <>
-                    <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-xs">Plaintiff Narrative</CardTitle></CardHeader>
-                      <CardContent>{textFrom(commandCenter.narrativeDuality, ["plaintiff_narrative", "plaintiff", "plaintiff_theory"], "No plaintiff narrative available.")}</CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="pb-2"><CardTitle className="text-xs">Defense Narrative</CardTitle></CardHeader>
-                      <CardContent>{textFrom(commandCenter.narrativeDuality, ["defense_narrative", "defense", "defense_theory"], "No defense narrative available.")}</CardContent>
-                    </Card>
-                  </>
-                )}
-              </TabsContent>
-
-              <TabsContent value="defense" className="h-[calc(100%-52px)] p-4 overflow-y-auto text-xs space-y-3">
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-xs">Defense Attack Paths ({commandCenter.defenseAttackPaths.length})</CardTitle></CardHeader>
-                  <CardContent className="space-y-2">
-                    {commandCenter.defenseAttackPaths.length === 0 && <div className="text-muted-foreground">No defense attack paths.</div>}
-                    {commandCenter.defenseAttackPaths.map((row, idx) => (
-                      <div key={`attack-${idx}`} className="border rounded-md p-2">
-                        <div className="font-medium">{textFrom(row, ["attack_vector", "title"], "Attack Path")}</div>
-                        <div className="text-muted-foreground mt-1">{textFrom(row, ["description", "summary"], "No details.")}</div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-xs">Objection Profiles ({commandCenter.objectionProfiles.length})</CardTitle></CardHeader>
-                  <CardContent className="space-y-2">
-                    {commandCenter.objectionProfiles.length === 0 && <div className="text-muted-foreground">No objection profiles.</div>}
-                    {commandCenter.objectionProfiles.map((row, idx) => (
-                      <div key={`obj-${idx}`} className="border rounded-md p-2">
-                        <div className="font-medium">{textFrom(row, ["objection_type", "title"], "Objection")}</div>
-                        <div className="text-muted-foreground mt-1">{textFrom(row, ["reasoning", "summary"], "No details.")}</div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-xs">Evidence Upgrades ({commandCenter.evidenceUpgradeRecommendations.length})</CardTitle></CardHeader>
-                  <CardContent className="space-y-2">
-                    {commandCenter.evidenceUpgradeRecommendations.length === 0 && <div className="text-muted-foreground">No evidence upgrade recommendations.</div>}
-                    {commandCenter.evidenceUpgradeRecommendations.map((row, idx) => (
-                      <div key={`upgrade-${idx}`} className="border rounded-md p-2">
-                        <div className="font-medium">{textFrom(row, ["recommendation", "title"], "Recommendation")}</div>
-                        <div className="text-muted-foreground mt-1">{textFrom(row, ["justification", "summary"], "No details.")}</div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+              <TabsContent value="collapse" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
+                {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No collapse candidates.</div>}
+                {commandCenter.collapseCandidates.map((row, idx) => (
+                  <div key={`dock-collapse-${idx}`} className="border rounded-md p-2">
+                    <div className="font-medium">{textFrom(row, ["fragility_type", "title"], "Fragility")}</div>
+                    <div className="text-muted-foreground">{textFrom(row, ["why", "argument", "summary"], "No details.")}</div>
+                  </div>
+                ))}
               </TabsContent>
             </Tabs>
-          </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
