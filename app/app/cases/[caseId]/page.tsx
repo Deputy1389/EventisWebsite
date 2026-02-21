@@ -184,6 +184,21 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     }
   }
 
+  async function handleForceFail(runId: string) {
+    try {
+      const res = await fetch(`/api/citeline/runs/${runId}/force-fail`, { method: "POST" });
+      if (!res.ok) {
+        const errorText = await res.text();
+        toast.error(parseApiError(errorText) || "Force fail failed");
+        return;
+      }
+      toast.success("Run force-failed");
+      void fetchData();
+    } catch {
+      toast.error("Force fail failed");
+    }
+  }
+
   if (loading) return <div className="flex h-[60vh] items-center justify-center">Loading matter...</div>;
   if (!matter) return <div className="py-20 text-center">Matter not found.</div>;
 
@@ -253,6 +268,9 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
             <div className="mt-3">
               <Button variant="outline" size="sm" onClick={() => handleCancelRun(activeRun.id)}>
                 Cancel Run
+              </Button>
+              <Button variant="destructive" size="sm" className="ml-2" onClick={() => handleForceFail(activeRun.id)}>
+                Force Fail
               </Button>
             </div>
           </CardContent>
