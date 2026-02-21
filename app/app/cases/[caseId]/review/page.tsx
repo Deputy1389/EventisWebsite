@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -47,6 +47,11 @@ type CitationRecord = {
   snippet?: string;
 };
 
+type PageRecord = {
+  source_document_id: string;
+  page_number: number;
+};
+
 type EventRecord = {
   event_id: string;
   event_type?: string;
@@ -73,28 +78,16 @@ type AuditEvent = {
   summary: string;
   confidence: number;
   citations: CitationRecord[];
-  sourcePages: number[];
 };
 
 type EvidenceGraphLike = {
   events?: EventRecord[];
   citations?: CitationRecord[];
+  pages?: PageRecord[];
   extensions?: Record<string, unknown>;
 };
 
 const SUCCESS_STATUSES = new Set(["success", "partial", "completed"]);
-
-const auditContrastVars = {
-  "--background": "oklch(0.99 0.003 84)",
-  "--foreground": "oklch(0.2 0.02 72)",
-  "--card": "oklch(1 0 0)",
-  "--card-foreground": "oklch(0.2 0.02 72)",
-  "--muted": "oklch(0.95 0.008 84)",
-  "--muted-foreground": "oklch(0.44 0.02 72)",
-  "--border": "oklch(0.86 0.01 82)",
-  "--secondary": "oklch(0.94 0.01 84)",
-  "--secondary-foreground": "oklch(0.2 0.02 72)",
-} as CSSProperties;
 
 function normalizeEventType(raw: string | undefined): string {
   return (raw || "Encounter")
@@ -118,9 +111,7 @@ function extractGraphPayload(payload: unknown): EvidenceGraphLike | null {
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
 
-  if (Array.isArray(p.events)) {
-    return p as EvidenceGraphLike;
-  }
+  if (Array.isArray(p.events)) return p as EvidenceGraphLike;
 
   if (p.evidence_graph && typeof p.evidence_graph === "object") {
     const graph = p.evidence_graph as Record<string, unknown>;
@@ -148,7 +139,6 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [matter, setMatter] = useState<Matter | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [commandCenter, setCommandCenter] = useState<CommandCenterData>({
     claimRows: [],
@@ -162,12 +152,12 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [query, setQuery] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [viewerEnabled, setViewerEnabled] = useState(false);
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
     [runs],
   );
-
   const latestRun = completedRuns[0] || null;
 
   const selectedEvent = useMemo(
@@ -183,7 +173,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const selectedCitation = selectedEvent?.citations?.[0] || null;
   const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
-  const selectedPage = selectedCitation?.page_number || selectedEvent?.sourcePages?.[0] || null;
+  const selectedPage = selectedCitation?.page_number || null;
   const viewerHref = selectedDocument
     ? `/api/citeline/documents/${selectedDocument.id}/download${selectedPage ? `#page=${selectedPage}` : ""}`
     : null;
@@ -191,10 +181,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return events;
-    return events.filter((e) => {
-      const blob = `${e.dateLabel} ${e.eventType} ${e.summary}`.toLowerCase();
-      return blob.includes(q);
-    });
+    return events.filter((e) => (`${e.dateLabel} ${e.eventType} ${e.summary}`).toLowerCase().includes(q));
   }, [events, query]);
 
   const fetchCaseData = useCallback(async () => {
@@ -206,7 +193,6 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         fetch(`/api/citeline/matters/${caseId}/runs`),
         fetch(`/api/citeline/matters/${caseId}/documents`),
       ]);
-
       if (!matterRes.ok) throw new Error("Unable to load case details.");
       if (!runsRes.ok) throw new Error("Unable to load runs.");
       if (!docsRes.ok) throw new Error("Unable to load documents.");
@@ -232,13 +218,9 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     setError(null);
     try {
       for (const runId of runIds) {
-        let res = await fetch(`/api/citeline/runs/${runId}/artifacts/by-name/evidence_graph.json`, {
-          cache: "no-store",
-        });
+        let res = await fetch(`/api/citeline/runs/${runId}/artifacts/by-name/evidence_graph.json`, { cache: "no-store" });
         if (!res.ok) {
-          res = await fetch(`/api/citeline/runs/${runId}/artifacts/json`, {
-            cache: "no-store",
-          });
+          res = await fetch(`/api/citeline/runs/${runId}/artifacts/json`, { cache: "no-store" });
         }
         if (!res.ok) continue;
 
@@ -246,6 +228,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         const graph = extractGraphPayload(payload);
         if (!graph || !Array.isArray(graph.events) || graph.events.length === 0) continue;
 
+        const pages = Array.isArray(graph.pages) ? graph.pages : [];
         const citations = Array.isArray(graph.citations) ? graph.citations : [];
         const eventsRaw = graph.events;
         const ext =
@@ -253,16 +236,30 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             ? (graph.extensions as Record<string, unknown>)
             : {};
 
+        const globalToLocalPage = new Map<number, number>();
+        const localByDoc = new Map<string, number>();
+        const sortedPages = [...pages].sort((a, b) => Number(a.page_number) - Number(b.page_number));
+        for (const p of sortedPages) {
+          const docId = String(p.source_document_id || "");
+          const local = (localByDoc.get(docId) || 0) + 1;
+          localByDoc.set(docId, local);
+          globalToLocalPage.set(Number(p.page_number), local);
+        }
+
         const citationById = new Map<string, CitationRecord>();
         for (const c of citations) {
-          if (c?.citation_id) citationById.set(c.citation_id, c);
+          if (!c?.citation_id) continue;
+          const localPage = globalToLocalPage.get(Number(c.page_number));
+          citationById.set(c.citation_id, {
+            ...c,
+            page_number: localPage || c.page_number,
+          });
         }
 
         const transformed = eventsRaw.map((e, idx) => {
           const eventCitations = (e.citation_ids || [])
             .map((id) => citationById.get(id))
             .filter((c): c is CitationRecord => Boolean(c));
-
           return {
             id: e.event_id || `event-${idx}`,
             dateLabel: parseDateLabel(e),
@@ -270,13 +267,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             summary: pickSummary(e),
             confidence: Number.isFinite(e.confidence) ? Number(e.confidence) : 0,
             citations: eventCitations,
-            sourcePages: Array.isArray(e.source_page_numbers) ? e.source_page_numbers : [],
-          } as AuditEvent;
+          } satisfies AuditEvent;
         });
 
         transformed.sort((a, b) => `${a.dateLabel}|${a.id}`.localeCompare(`${b.dateLabel}|${b.id}`));
         setEvents(transformed);
         setSelectedEventId((prev) => prev || transformed[0]?.id || null);
+        setViewerEnabled(false);
         setCommandCenter({
           claimRows: Array.isArray(ext?.claim_rows) ? ext.claim_rows : [],
           causationChains: Array.isArray(ext?.causation_chains) ? ext.causation_chains : [],
@@ -319,9 +316,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         method: "POST",
         body: JSON.stringify({}),
       });
-      if (!res.ok) {
-        throw new Error("Failed to start new run");
-      }
+      if (!res.ok) throw new Error("Failed to start new run");
       setError("Reprocessing started. This page will update automatically once extraction completes.");
       await fetchCaseData();
     } catch (err) {
@@ -349,6 +344,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     return () => clearInterval(timer);
   }, [runs, fetchCaseData]);
 
+  useEffect(() => {
+    setViewerEnabled(false);
+  }, [selectedEventId]);
+
   if (isLoading) {
     return (
       <div className="h-[60vh] flex items-center justify-center">
@@ -359,7 +358,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   }
 
   return (
-    <div className="h-screen -m-8 flex flex-col bg-background text-foreground" style={auditContrastVars}>
+    <div className="h-screen -m-8 flex flex-col bg-background text-foreground">
       <div className="h-14 border-b bg-card px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
@@ -406,30 +405,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       )}
 
       <div className="mx-6 mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Audit Events</div>
-            <div className="text-xl font-semibold">{events.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Claims</div>
-            <div className="text-xl font-semibold">{commandCenter.claimRows.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Causation Chains</div>
-            <div className="text-xl font-semibold">{commandCenter.causationChains.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Contradictions</div>
-            <div className="text-xl font-semibold">{commandCenter.contradictionMatrix.length}</div>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Audit Events</div><div className="text-xl font-semibold">{events.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Claims</div><div className="text-xl font-semibold">{commandCenter.claimRows.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Causation Chains</div><div className="text-xl font-semibold">{commandCenter.causationChains.length}</div></CardContent></Card>
+        <Card><CardContent className="p-3"><div className="text-[10px] uppercase tracking-wide text-muted-foreground">Contradictions</div><div className="text-xl font-semibold">{commandCenter.contradictionMatrix.length}</div></CardContent></Card>
       </div>
 
       <div className="flex-1 overflow-hidden mt-4 mx-6 mb-6 grid grid-cols-12 gap-4">
@@ -445,7 +424,6 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               />
             </div>
           </div>
-
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {isGraphLoading && (
               <div className="text-xs text-muted-foreground flex items-center gap-2">
@@ -453,9 +431,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               </div>
             )}
             {!isGraphLoading && filteredEvents.length === 0 && (
-              <div className="text-sm text-foreground/80 p-2">
-                No events available yet. Run analysis to populate Audit Mode.
-              </div>
+              <div className="text-sm text-muted-foreground p-2">No events available yet. Run analysis to populate Audit Mode.</div>
             )}
             {filteredEvents.map((e) => {
               const active = selectedEvent?.id === e.id;
@@ -470,7 +446,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
                     <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
                   </div>
-                  <p className="text-xs mt-2 leading-relaxed text-foreground/90">{e.summary}</p>
+                  <p className="text-xs mt-2 leading-relaxed">{e.summary}</p>
                   <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
                     <span>{e.citations.length} citation(s)</span>
                     <span>Confidence {e.confidence}%</span>
@@ -487,26 +463,29 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               <div>
                 <div className="text-sm font-semibold">Record Packet Viewer</div>
                 <div className="text-xs text-muted-foreground">
-                  {selectedDocument
-                    ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}`
-                    : "Select an event with citations to open the source packet"}
+                  {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}` : "Select an event with citations to open the source packet"}
                 </div>
               </div>
               {viewerHref && (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={viewerHref} target="_blank" rel="noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Source
-                  </a>
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => setViewerEnabled((v) => !v)}>
+                    {viewerEnabled ? "Hide Preview" : "Load Preview"}
+                  </Button>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={viewerHref} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Source
+                    </a>
+                  </Button>
+                </div>
               )}
             </div>
             <div className="flex-1 bg-muted/60">
-              {viewerHref ? (
-                <iframe
-                  title="Source document viewer"
-                  src={viewerHref}
-                  className="w-full h-full border-0"
-                />
+              {viewerHref && viewerEnabled ? (
+                <iframe title="Source document viewer" src={viewerHref} className="w-full h-full border-0" />
+              ) : viewerHref ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4 mr-2" /> Preview is paused. Click Load Preview when needed.
+                </div>
               ) : (
                 <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
                   <FileText className="h-4 w-4 mr-2" /> No source document selected.
@@ -563,24 +542,16 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                   )}
                   {(selectedEvent?.citations || []).slice(0, 8).map((c) => {
                     const doc = documentMap.get(c.source_document_id);
-                    const href = doc
-                      ? `/api/citeline/documents/${doc.id}/download#page=${c.page_number}`
-                      : null;
+                    const href = doc ? `/api/citeline/documents/${doc.id}/download#page=${c.page_number}` : null;
                     return (
                       <div key={c.citation_id} className="border rounded p-2 flex items-start justify-between gap-2">
                         <div>
-                          <div className="font-medium">
-                            {doc?.filename || c.source_document_id} p. {c.page_number}
-                          </div>
-                          <div className="text-muted-foreground">
-                            {(c.snippet || "No snippet available.").slice(0, 220)}
-                          </div>
+                          <div className="font-medium">{doc?.filename || c.source_document_id} p. {c.page_number}</div>
+                          <div className="text-muted-foreground">{(c.snippet || "No snippet available.").slice(0, 220)}</div>
                         </div>
                         {href && (
                           <Button size="sm" variant="ghost" asChild>
-                            <a href={href} target="_blank" rel="noreferrer">
-                              Open
-                            </a>
+                            <a href={href} target="_blank" rel="noreferrer">Open</a>
                           </Button>
                         )}
                       </div>

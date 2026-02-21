@@ -37,14 +37,10 @@ export async function GET(_: Request, { params }: RouteParams) {
   const blob = await res.blob();
   const headers = new Headers();
   headers.set("Content-Type", res.headers.get("Content-Type") || "application/pdf");
-  headers.set(
-    "Content-Disposition",
-    res.headers.get("Content-Disposition") || `inline; filename="${documentId}.pdf"`,
-  );
+  headers.set("Content-Disposition", `inline; filename="${documentId}.pdf"`);
 
   return new NextResponse(blob, {
     status: 200,
     headers,
   });
 }
-
