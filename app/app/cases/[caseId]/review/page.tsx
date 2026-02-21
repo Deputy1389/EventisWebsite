@@ -199,6 +199,27 @@ function textFrom(row: Record<string, unknown>, keys: string[], fallback = "N/A"
   return fallback;
 }
 
+function countMoatSignals(ext: Record<string, unknown>): number {
+  const keys = [
+    "claim_rows",
+    "causation_chains",
+    "case_collapse_candidates",
+    "defense_attack_paths",
+    "objection_profiles",
+    "evidence_upgrade_recommendations",
+    "quote_lock_rows",
+    "contradiction_matrix",
+  ] as const;
+  let total = 0;
+  for (const key of keys) {
+    const value = ext[key];
+    if (Array.isArray(value)) total += value.length;
+  }
+  if (ext.narrative_duality && typeof ext.narrative_duality === "object") total += 1;
+  if (ext.citation_fidelity && typeof ext.citation_fidelity === "object") total += 1;
+  return total;
+}
+
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
 
@@ -305,6 +326,12 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     setIsGraphLoading(true);
     setError(null);
     try {
+      let bestCandidate: {
+        events: AuditEvent[];
+        commandCenter: CommandCenterData;
+        score: number;
+      } | null = null;
+
       for (const runId of runIds) {
         let res = await fetch(`/api/citeline/runs/${runId}/artifacts/by-name/evidence_graph.json`, { cache: "no-store" });
         if (!res.ok) {
@@ -389,11 +416,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         });
 
         transformed.sort((a, b) => `${a.dateLabel}|${a.id}`.localeCompare(`${b.dateLabel}|${b.id}`));
-        setEvents(transformed);
-        setSelectedEventId((prev) => prev || transformed.find((t) => t.citations.length > 0)?.id || transformed[0]?.id || null);
-        setSelectedCitationId((prev) => prev || null);
-        setViewerEnabled(false);
-        setCommandCenter({
+        const nextCommandCenter: CommandCenterData = {
           claimRows: asRecordArray(ext?.claim_rows),
           causationChains: asRecordArray(ext?.causation_chains),
           collapseCandidates: asRecordArray(ext?.case_collapse_candidates),
@@ -404,7 +427,31 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           contradictionMatrix: asRecordArray(ext?.contradiction_matrix),
           narrativeDuality: asRecord(ext?.narrative_duality),
           citationFidelity: asRecord(ext?.citation_fidelity),
-        });
+        };
+
+        const moatScore =
+          countMoatSignals(ext) +
+          transformed.length * 0.001;
+
+        if (!bestCandidate || moatScore > bestCandidate.score) {
+          bestCandidate = {
+            events: transformed,
+            commandCenter: nextCommandCenter,
+            score: moatScore,
+          };
+        }
+
+        if (countMoatSignals(ext) > 0) {
+          break;
+        }
+      }
+
+      if (bestCandidate) {
+        setEvents(bestCandidate.events);
+        setSelectedEventId((prev) => prev || bestCandidate.events.find((t) => t.citations.length > 0)?.id || bestCandidate.events[0]?.id || null);
+        setSelectedCitationId((prev) => prev || null);
+        setViewerEnabled(false);
+        setCommandCenter(bestCandidate.commandCenter);
         return;
       }
 
