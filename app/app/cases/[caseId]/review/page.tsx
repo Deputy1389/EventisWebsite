@@ -733,14 +733,14 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               <div className="text-sm text-muted-foreground">No strategic flags detected in this record set.</div>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
-                {[...commandCenter.collapseCandidates, ...commandCenter.defenseAttackPaths, ...commandCenter.contradictionMatrix].slice(0, 8).map((row, idx) => {
+                {[...commandCenter.collapseCandidates, ...commandCenter.defenseAttackPaths, ...commandCenter.contradictionMatrix, ...commandCenter.causationChains].slice(0, 10).map((row, idx) => {
                   const score = Number(row.fragility_score || row.confidence || 50);
                   const impact = deriveImpact(score);
                   const citationIds = collectCitationIds(row);
                   return (
                     <div key={`moat-${idx}`} className="border rounded-md p-3 text-xs space-y-2">
-                      <div className="font-medium">{textFrom(row, ["title", "fragility_type", "attack", "category"], "Strategic Signal")}</div>
-                      <div className="text-muted-foreground">{textFrom(row, ["why", "path", "description", "analysis"], "Litigation implication not available.")}</div>
+                      <div className="font-medium">{textFrom(row, ["title", "fragility_type", "attack", "category", "body_region"], "Strategic Signal")}</div>
+                      <div className="text-muted-foreground">{textFrom(row, ["why", "path", "description", "analysis", "summary", "causation_thesis"], "Litigation implication not available.")}</div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">Impact {impact}</Badge>
                         <Badge variant="outline">Confidence {Math.round(score)}</Badge>
