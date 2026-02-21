@@ -10,25 +10,11 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { parseApiError } from "@/lib/api-error";
 
 type CreatedMatter = {
   id: string;
 };
-
-function parseErrorMessage(text: string): string {
-  try {
-    const data = JSON.parse(text);
-    if (typeof data === "string") return data;
-    if (data && typeof data === "object") {
-      if (typeof data.error === "string") return data.error;
-      if (typeof data.detail === "string") return data.detail;
-      if (typeof data.message === "string") return data.message;
-    }
-  } catch {
-    // Not JSON, fall through to raw text
-  }
-  return text;
-}
 
 export default function NewCasePage() {
   const router = useRouter();
@@ -65,7 +51,7 @@ export default function NewCasePage() {
 
       if (!matterRes.ok) {
         const errorText = await matterRes.text();
-        const errorMessage = parseErrorMessage(errorText);
+        const errorMessage = parseApiError(errorText);
         throw new Error(`Failed to create matter: ${errorMessage}`);
       }
 
@@ -83,7 +69,7 @@ export default function NewCasePage() {
 
       if (!uploadRes.ok) {
         const errorText = await uploadRes.text();
-        const errorMessage = parseErrorMessage(errorText);
+        const errorMessage = parseApiError(errorText);
         throw new Error(`Failed to upload document: ${errorMessage}`);
       }
 

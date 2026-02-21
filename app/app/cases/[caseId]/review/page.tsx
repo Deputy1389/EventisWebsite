@@ -17,11 +17,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { parseApiError } from "@/lib/api-error";
 
 type Run = {
   id: string;
   status: string;
   started_at: string | null;
+  heartbeat_at?: string | null;
   metrics?: {
     events_total?: number;
     providers_detected?: number;
@@ -491,7 +493,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         method: "POST",
         body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error("Failed to start new run");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(parseApiError(errorText) || "Failed to start new run");
+      }
       setError("Reprocessing started. This page will update automatically once extraction completes.");
       await fetchCaseData();
     } catch (err) {

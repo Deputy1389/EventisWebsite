@@ -11,11 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { parseApiError } from "@/lib/api-error";
 
 type Run = {
   id: string;
   status: string;
   started_at: string | null;
+  heartbeat_at?: string | null;
   metrics?: {
     pages_total?: number;
     events_total?: number;
@@ -55,6 +57,13 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
 
   const latestSuccessRun = runs.find((r) => r.status === "success");
   const activeRun = runs.find((r) => r.status === "pending" || r.status === "running");
+  const activeRunStale = (() => {
+    if (!activeRun) return false;
+    const ts = activeRun.heartbeat_at || activeRun.started_at;
+    if (!ts) return false;
+    const ageMs = Date.now() - new Date(ts).getTime();
+    return ageMs > 10 * 60 * 1000;
+  })();
 
   const copyToClipboard = async (label: string, value: string) => {
     try {
@@ -110,7 +119,8 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
         toast.success("Matter deleted");
         router.push("/app/cases");
       } else {
-        toast.error("Delete failed");
+        const errorText = await res.text();
+        toast.error(parseApiError(errorText) || "Delete failed");
       }
     } finally {
       setDeleting(false);
@@ -129,13 +139,19 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
         body: formData,
       });
       if (!uploadRes.ok) {
-        toast.error("Upload failed");
+        const errorText = await uploadRes.text();
+        toast.error(parseApiError(errorText) || "Upload failed");
         return;
       }
-      await fetch(`/api/citeline/matters/${caseId}/runs`, {
+      const runRes = await fetch(`/api/citeline/matters/${caseId}/runs`, {
         method: "POST",
         body: JSON.stringify({}),
       });
+      if (!runRes.ok) {
+        const errorText = await runRes.text();
+        toast.error(parseApiError(errorText) || "Failed to start run");
+        return;
+      }
       toast.success("Upload complete. Opening Audit Mode...");
       void fetchData();
       router.push(`/app/cases/${caseId}/review`);
@@ -151,6 +167,21 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
       return;
     }
     window.open(`/api/citeline/runs/${latestSuccessRun.id}/artifacts/${type}`, "_blank");
+  }
+
+  async function handleCancelRun(runId: string) {
+    try {
+      const res = await fetch(`/api/citeline/runs/${runId}/cancel`, { method: "POST" });
+      if (!res.ok) {
+        const errorText = await res.text();
+        toast.error(parseApiError(errorText) || "Cancel failed");
+        return;
+      }
+      toast.success("Run cancelled");
+      void fetchData();
+    } catch {
+      toast.error("Cancel failed");
+    }
   }
 
   if (loading) return <div className="flex h-[60vh] items-center justify-center">Loading matter...</div>;
@@ -208,11 +239,21 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {activeRunStale && (
+              <div className="mb-2 text-xs text-destructive">
+                This run appears stalled. You can cancel and retry.
+              </div>
+            )}
             <div className="grid gap-2 text-[10px] uppercase tracking-[0.15em] text-muted-foreground sm:grid-cols-4">
               <span className="rounded-md bg-background/80 px-2 py-1 text-primary">Done: OCR</span>
               <span className="rounded-md bg-background/80 px-2 py-1 text-primary">Active: Mapping</span>
               <span className="rounded-md bg-background/80 px-2 py-1">Next: Gap Analysis</span>
               <span className="rounded-md bg-background/80 px-2 py-1">Next: Export</span>
+            </div>
+            <div className="mt-3">
+              <Button variant="outline" size="sm" onClick={() => handleCancelRun(activeRun.id)}>
+                Cancel Run
+              </Button>
             </div>
           </CardContent>
         </Card>
