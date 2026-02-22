@@ -37,20 +37,17 @@ export default function NewCasePage() {
     setIsProcessing(true);
 
     try {
-      // Get firm ID from session or fetch the first available firm
-      let firmId = session?.user?.firmId;
-
-      if (!firmId) {
-        const firmsRes = await fetch("/api/citeline/firms");
-        if (!firmsRes.ok) {
-          throw new Error("Failed to fetch firms");
-        }
-        const firms = await firmsRes.json();
-        if (!firms || firms.length === 0) {
-          throw new Error("No firms found. Please contact support.");
-        }
-        firmId = firms[0].id;
+      // Always fetch the latest firm from the database
+      // Don't trust session.user.firmId as it may be stale
+      const firmsRes = await fetch("/api/citeline/firms");
+      if (!firmsRes.ok) {
+        throw new Error("Failed to fetch firms");
       }
+      const firms = await firmsRes.json();
+      if (!firms || firms.length === 0) {
+        throw new Error("No firms found. Please contact support.");
+      }
+      const firmId = firms[0].id;
 
       const matterRes = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         method: "POST",
