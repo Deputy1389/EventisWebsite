@@ -36,10 +36,20 @@ export default function DashboardPage() {
   const [matters, setMatters] = useState<FocusMatter[]>([]);
 
   const fetchMatters = useCallback(async () => {
-    const firmId = session?.user?.firmId;
-    if (!firmId) return;
+    if (!session?.user?.id) return; // Must be authenticated
+
     setLoading(true);
     try {
+      // Fetch firm from API if not in session
+      let firmId = session?.user?.firmId;
+      if (!firmId) {
+        const firmsRes = await fetch("/api/citeline/firms", { cache: "no-store" });
+        if (!firmsRes.ok) return;
+        const firms = await firmsRes.json();
+        if (!firms || firms.length === 0) return;
+        firmId = firms[0].id;
+      }
+
       const res = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         cache: "no-store",
       });
@@ -57,7 +67,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.firmId]);
+  }, [session?.user?.id, session?.user?.firmId]);
 
   useEffect(() => {
     void fetchMatters();
