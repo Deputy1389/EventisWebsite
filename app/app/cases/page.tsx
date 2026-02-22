@@ -37,10 +37,21 @@ export default function AllCasesPage() {
   const [sortBy, setSortBy] = useState("newest");
 
   const fetchMatters = useCallback(async () => {
-    if (!session?.user?.firmId) return;
+    if (!session?.user?.id) return; // Must be authenticated
+
     setLoading(true);
     try {
-      const res = await fetch(`/api/citeline/firms/${session.user.firmId}/matters`, {
+      // Fetch firm from API if not in session
+      let firmId = session?.user?.firmId;
+      if (!firmId) {
+        const firmsRes = await fetch("/api/citeline/firms", { cache: "no-store" });
+        if (!firmsRes.ok) return;
+        const firms = await firmsRes.json();
+        if (!firms || firms.length === 0) return;
+        firmId = firms[0].id;
+      }
+
+      const res = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         cache: "no-store",
       });
       if (res.ok) {
@@ -49,7 +60,7 @@ export default function AllCasesPage() {
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.firmId]);
+  }, [session?.user?.id, session?.user?.firmId]);
 
   useEffect(() => {
     void fetchMatters();
