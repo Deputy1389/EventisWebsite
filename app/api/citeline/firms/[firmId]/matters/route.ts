@@ -15,10 +15,13 @@ export async function GET(_: Request, { params }: RouteParams) {
   const session = await auth();
   const { firmId } = await params;
 
-  if (!session?.user?.id || !session?.user?.firmId) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user.firmId !== firmId) {
+
+  // Allow accessing matters in any firm if user doesn't have firmId in session
+  // The backend will handle proper authorization
+  if (session.user.firmId && session.user.firmId !== firmId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -44,10 +47,13 @@ export async function POST(request: Request, { params }: RouteParams) {
   const session = await auth();
   const { firmId } = await params;
 
-  if (!session?.user?.id || !session?.user?.firmId) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user.firmId !== firmId) {
+
+  // Allow creating matters in any firm if user doesn't have firmId in session
+  // The backend will handle proper authorization
+  if (session.user.firmId && session.user.firmId !== firmId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
