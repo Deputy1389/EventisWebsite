@@ -29,9 +29,18 @@ export default function NewCasePage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!caseName) {
-      toast.error("Please enter a case name first");
-      return;
+    // Auto-generate case name from filename if not provided
+    let finalCaseName = caseName;
+    if (!finalCaseName) {
+      // Remove file extension and clean up the filename
+      finalCaseName = file.name
+        .replace(/\.[^/.]+$/, "") // Remove extension
+        .replace(/[_-]/g, " ")    // Replace underscores and dashes with spaces
+        .replace(/\s+/g, " ")     // Normalize multiple spaces
+        .trim();
+
+      // Set the case name field so user can see what was auto-generated
+      setCaseName(finalCaseName);
     }
 
     setIsProcessing(true);
@@ -52,7 +61,7 @@ export default function NewCasePage() {
       const matterRes = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: caseName }),
+        body: JSON.stringify({ title: finalCaseName }),
       });
 
       if (!matterRes.ok) {
@@ -108,10 +117,7 @@ export default function NewCasePage() {
   }
 
   function triggerFileSelect() {
-    if (!caseName) {
-      toast.error("Please enter a case name first");
-      return;
-    }
+    // Allow file selection even without case name - will auto-generate from filename
     fileInputRef.current?.click();
   }
 
@@ -152,10 +158,10 @@ export default function NewCasePage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="caseName">Case Name / Matter Reference</Label>
+            <Label htmlFor="caseName">Case Name / Matter Reference <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Input
               id="caseName"
-              placeholder="e.g. Doe v. Smith"
+              placeholder="Leave blank to auto-generate from filename"
               value={caseName}
               onChange={(e) => setCaseName(e.target.value)}
             />
