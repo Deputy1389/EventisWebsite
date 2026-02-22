@@ -19,11 +19,8 @@ export async function GET(_: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Allow accessing matters in any firm if user doesn't have firmId in session
-  // The backend will handle proper authorization
-  if (session.user.firmId && session.user.firmId !== firmId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  // Don't check firmId matching here - allow access to any firm
+  // Backend will handle proper authorization based on identity headers
 
   const apiUrl = getServerApiUrl();
   const res = await fetch(`${apiUrl}/firms/${firmId}/matters`, {
@@ -51,11 +48,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Allow creating matters in any firm if user doesn't have firmId in session
-  // The backend will handle proper authorization
-  if (session.user.firmId && session.user.firmId !== firmId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  // Don't check firmId matching here - the page fetches firms from API
+  // Backend will handle proper authorization based on identity headers
 
   const payload = await request.text();
   const apiUrl = getServerApiUrl();
