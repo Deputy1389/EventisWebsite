@@ -34,15 +34,24 @@ export default function NewCasePage() {
       return;
     }
 
-    const firmId = session?.user?.firmId;
-    if (!firmId) {
-      toast.error("You must be logged in with a firm to create a case");
-      return;
-    }
-
     setIsProcessing(true);
 
     try {
+      // Get firm ID from session or fetch the first available firm
+      let firmId = session?.user?.firmId;
+
+      if (!firmId) {
+        const firmsRes = await fetch("/api/citeline/firms");
+        if (!firmsRes.ok) {
+          throw new Error("Failed to fetch firms");
+        }
+        const firms = await firmsRes.json();
+        if (!firms || firms.length === 0) {
+          throw new Error("No firms found. Please contact support.");
+        }
+        firmId = firms[0].id;
+      }
+
       const matterRes = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
