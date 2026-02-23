@@ -1063,7 +1063,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                       <div className="flex items-center justify-between">
                         <div className="font-medium">{textFrom(row, ["attack", "attack_vector", "title"], "Defense Path")}</div>
                         <div className="flex items-center gap-1">
-                          {row.confidence_tier && <Badge variant="outline">{String(row.confidence_tier)}</Badge>}
+                          {typeof row.confidence_tier === "string" && <Badge variant="outline">{row.confidence_tier}</Badge>}
                           {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
                         </div>
                       </div>
