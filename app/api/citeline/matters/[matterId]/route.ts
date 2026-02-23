@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-
 import { auth } from "@/lib/auth";
 import { getServerApiUrl } from "@/lib/citeline";
 import { withServerAuthHeaders } from "@/lib/citeline-server";
+import { getFirmId } from "@/lib/get-firm-id";
 
 export const runtime = "nodejs";
 
@@ -15,9 +15,11 @@ export async function GET(_: Request, { params }: RouteParams) {
   const session = await auth();
   const { matterId } = await params;
 
-  if (!session?.user?.id || !session?.user?.firmId) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const firmId = await getFirmId(session);
 
   const apiUrl = getServerApiUrl();
   const res = await fetch(`${apiUrl}/matters/${matterId}`, {
@@ -25,7 +27,7 @@ export async function GET(_: Request, { params }: RouteParams) {
     cache: "no-store",
     headers: withServerAuthHeaders(undefined, {
       userId: session.user.id,
-      firmId: session.user.firmId,
+      firmId: firmId || "",
     }, "GET", `/matters/${matterId}`),
   });
 
@@ -40,16 +42,18 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   const session = await auth();
   const { matterId } = await params;
 
-  if (!session?.user?.id || !session?.user?.firmId) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const firmId = await getFirmId(session);
 
   const apiUrl = getServerApiUrl();
   const res = await fetch(`${apiUrl}/matters/${matterId}`, {
     method: "DELETE",
     headers: withServerAuthHeaders(undefined, {
       userId: session.user.id,
-      firmId: session.user.firmId,
+      firmId: firmId || "",
     }, "DELETE", `/matters/${matterId}`),
   });
 
