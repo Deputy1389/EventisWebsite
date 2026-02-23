@@ -203,6 +203,52 @@ function textFrom(row: Record<string, unknown>, keys: string[], fallback = "N/A"
   return fallback;
 }
 
+function causationSummary(row: Record<string, unknown>): string {
+  // Try legacy keys first
+  for (const k of ["causation_thesis", "summary", "narrative"]) {
+    const v = row[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  // Build from actual pipeline data shape
+  const rungs = Array.isArray(row.rungs) ? row.rungs : [];
+  const missing = Array.isArray(row.missing_rungs) ? row.missing_rungs : [];
+  const score = typeof row.chain_integrity_score === "number" ? row.chain_integrity_score : null;
+  if (rungs.length === 0 && score === null) return "No details.";
+  const rungLabels = rungs.slice(0, 6).map((r: Record<string, unknown>) => {
+    const rtype = String(r?.rung_type || "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+    const rdate = String(r?.date || "");
+    return rdate && rdate !== "unknown" ? `${rtype} (${rdate})` : rtype;
+  }).filter(Boolean);
+  const parts: string[] = [];
+  if (rungLabels.length) parts.push(rungLabels.join(" → "));
+  if (score !== null) parts.push(`Integrity: ${score}/100`);
+  if (missing.length) parts.push(`Missing: ${missing.map((m: string) => String(m).replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())).join(", ")}`);
+  return parts.join(" | ") || "No details.";
+}
+
+function contradictionSummary(row: Record<string, unknown>): string {
+  // Try legacy keys first
+  for (const k of ["description", "analysis", "summary"]) {
+    const v = row[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  // Build from actual pipeline data shape
+  const supporting = row.supporting as Record<string, unknown> | undefined;
+  const contradicting = row.contradicting as Record<string, unknown> | undefined;
+  if (!supporting && !contradicting) return "No details.";
+  const sVal = String(supporting?.value || "").replace(/_/g, " ");
+  const cVal = String(contradicting?.value || "").replace(/_/g, " ");
+  const sDate = String(supporting?.date || "");
+  const cDate = String(contradicting?.date || "");
+  const delta = typeof row.strength_delta === "number" ? row.strength_delta : null;
+  const parts: string[] = [];
+  if (sVal || cVal) {
+    parts.push(`${sVal}${sDate ? ` (${sDate})` : ""} vs ${cVal}${cDate ? ` (${cDate})` : ""}`);
+  }
+  if (delta !== null) parts.push(`Strength delta: ${delta}`);
+  return parts.join(" | ") || "No details.";
+}
+
 function countMoatSignals(ext: Record<string, unknown>): number {
   const keys = [
     "claim_rows",
@@ -970,42 +1016,81 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
               <TabsContent value="causation" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
                 {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation signals for this selection.</div>}
-                {commandCenter.causationChains.map((row, idx) => (
-                  <div key={`dock-causation-${idx}`} className="border rounded-md p-2">
-                    <div className="font-medium">{textFrom(row, ["body_region"], "General")}</div>
-                    <div className="text-muted-foreground">{textFrom(row, ["causation_thesis", "summary"], "No details.")}</div>
-                  </div>
-                ))}
+                {commandCenter.causationChains.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  const score = typeof row.chain_integrity_score === "number" ? row.chain_integrity_score : null;
+                  return (
+                    <div key={`dock-causation-${idx}`} className="border rounded-md p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{textFrom(row, ["body_region"], "General").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
+                        <div className="flex items-center gap-1">
+                          {score !== null && <Badge variant="outline">Integrity {score}/100</Badge>}
+                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
+                        </div>
+                      </div>
+                      <div className="text-muted-foreground mt-1">{causationSummary(row)}</div>
+                    </div>
+                  );
+                })}
               </TabsContent>
 
               <TabsContent value="contradictions" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
                 {commandCenter.contradictionMatrix.length === 0 && <div className="text-muted-foreground">No contradictions detected.</div>}
-                {commandCenter.contradictionMatrix.map((row, idx) => (
-                  <div key={`dock-contradiction-${idx}`} className="border rounded-md p-2">
-                    <div className="font-medium">{textFrom(row, ["category", "contradiction_type"], "Contradiction")}</div>
-                    <div className="text-muted-foreground">{textFrom(row, ["description", "analysis"], "No details.")}</div>
-                  </div>
-                ))}
+                {commandCenter.contradictionMatrix.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  const delta = typeof row.strength_delta === "number" ? row.strength_delta : null;
+                  return (
+                    <div key={`dock-contradiction-${idx}`} className="border rounded-md p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{textFrom(row, ["category", "contradiction_type"], "Contradiction").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
+                        <div className="flex items-center gap-1">
+                          {delta !== null && <Badge variant="outline">Δ {delta}</Badge>}
+                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
+                        </div>
+                      </div>
+                      <div className="text-muted-foreground mt-1">{contradictionSummary(row)}</div>
+                    </div>
+                  );
+                })}
               </TabsContent>
 
               <TabsContent value="defense" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
                 {(commandCenter.defenseAttackPaths.length + commandCenter.objectionProfiles.length) === 0 && <div className="text-muted-foreground">No defense signals available.</div>}
-                {commandCenter.defenseAttackPaths.map((row, idx) => (
-                  <div key={`dock-defense-${idx}`} className="border rounded-md p-2">
-                    <div className="font-medium">{textFrom(row, ["attack", "attack_vector", "title"], "Defense Path")}</div>
-                    <div className="text-muted-foreground">{textFrom(row, ["path", "description", "summary"], "No details.")}</div>
-                  </div>
-                ))}
+                {commandCenter.defenseAttackPaths.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  return (
+                    <div key={`dock-defense-${idx}`} className="border rounded-md p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{textFrom(row, ["attack", "attack_vector", "title"], "Defense Path")}</div>
+                        <div className="flex items-center gap-1">
+                          {row.confidence_tier && <Badge variant="outline">{String(row.confidence_tier)}</Badge>}
+                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
+                        </div>
+                      </div>
+                      <div className="text-muted-foreground mt-1">{textFrom(row, ["path", "description", "summary"], "No details.")}</div>
+                    </div>
+                  );
+                })}
               </TabsContent>
 
               <TabsContent value="collapse" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
                 {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No collapse candidates.</div>}
-                {commandCenter.collapseCandidates.map((row, idx) => (
-                  <div key={`dock-collapse-${idx}`} className="border rounded-md p-2">
-                    <div className="font-medium">{textFrom(row, ["fragility_type", "title"], "Fragility")}</div>
-                    <div className="text-muted-foreground">{textFrom(row, ["why", "argument", "summary"], "No details.")}</div>
-                  </div>
-                ))}
+                {commandCenter.collapseCandidates.map((row, idx) => {
+                  const citationIds = collectCitationIds(row);
+                  const score = typeof row.fragility_score === "number" ? row.fragility_score : null;
+                  return (
+                    <div key={`dock-collapse-${idx}`} className="border rounded-md p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{textFrom(row, ["fragility_type", "title"], "Fragility").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
+                        <div className="flex items-center gap-1">
+                          {score !== null && <Badge variant="outline">Score {score}</Badge>}
+                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
+                        </div>
+                      </div>
+                      <div className="text-muted-foreground mt-1">{textFrom(row, ["why", "argument", "summary"], "No details.")}</div>
+                    </div>
+                  );
+                })}
               </TabsContent>
             </Tabs>
           )}
