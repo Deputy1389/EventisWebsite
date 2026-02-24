@@ -779,7 +779,23 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         {/* Pane 1: Timeline (Master) */}
         <div className="w-[320px] xl:w-[380px] flex flex-col bg-card shrink-0">
           <div className="p-3 border-b bg-muted/5 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Timeline</span>
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Timeline</span>
+                <Button 
+                  size="sm" 
+                  variant={viewerMode === "chronology" ? "default" : "outline"} 
+                  className="h-7 text-[10px] px-2"
+                  onClick={() => {
+                    setViewerMode("chronology");
+                    setViewerEnabled(true);
+                    setViewerKey(k => k + 1);
+                  }}
+                >
+                  <FileText className="h-3 w-3 mr-1" /> View Full Chronology PDF
+                </Button>
+              </div>
+            </div>
             <span className="text-[10px] text-muted-foreground font-medium">{filteredEvents.length} Events</span>
           </div>
           <div className="p-3 border-b shrink-0">
@@ -836,7 +852,23 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {!selectedEvent ? (
-              <div className="text-xs text-muted-foreground text-center py-10">Select an event to see strategic implications.</div>
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center border-2 border-dashed rounded-xl bg-background/50">
+                <FileText className="h-8 w-8 text-primary/40 mb-3" />
+                <div className="text-sm font-semibold mb-1">No Event Selected</div>
+                <p className="text-[11px] text-muted-foreground mb-4">Click any timeline event to see its specific risks and source evidence.</p>
+                <div className="w-full h-px bg-border mb-4" />
+                <Button 
+                  variant="secondary" 
+                  className="w-full text-xs h-9"
+                  onClick={() => {
+                    setViewerMode("chronology");
+                    setViewerEnabled(true);
+                    setViewerKey(k => k + 1);
+                  }}
+                >
+                  Open Generated Chronology PDF
+                </Button>
+              </div>
             ) : (
               <>
                 {/* Related Moat Signals for Selected Event */}
