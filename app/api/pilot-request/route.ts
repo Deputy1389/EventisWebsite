@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerApiUrl } from "@/lib/citeline";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+
 
 export async function POST(request: Request) {
     try {
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
 
         // 2. Send Email Notification via Resend
         if (process.env.RESEND_API_KEY) {
+            const resend = new Resend(process.env.RESEND_API_KEY);
             await resend.emails.send({
                 from: "Linecite Pilot <onboarding@linecite.com>",
                 to: "patrick@linecite.com",
