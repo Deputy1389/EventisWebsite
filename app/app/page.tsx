@@ -8,6 +8,7 @@ import {
   FileText,
   Loader2,
   Plus,
+  Scale,
   ShieldCheck,
   Sparkles,
   Timer,
@@ -90,9 +91,9 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Dashboard</p>
-            <h1 className="mt-1 text-3xl">Welcome back, {session?.user?.name || "Counsel"}</h1>
+            <h1 className="mt-1 text-3xl">Matter Command Center</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              This is your daily launchpad. Open top-priority matters and jump straight into Audit Mode.
+              Monitor case health, identify defense risks, and verify clinical citations.
             </p>
           </div>
           <div className="flex gap-2">
@@ -112,19 +113,19 @@ export default function DashboardPage() {
       <section className="grid gap-4 md:grid-cols-3">
         <Card className="border-0 shadow-lg shadow-primary/8">
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Total Matters</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Active Docket</p>
             <p className="mt-2 text-3xl font-semibold">{stats.total}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-lg shadow-primary/8">
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Review Ready</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Audit Pending</p>
             <p className="mt-2 text-3xl font-semibold">{stats.reviewReady}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-lg shadow-primary/8">
           <CardContent className="p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Focus Queue</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">High Risk</p>
             <p className="mt-2 text-3xl font-semibold">{stats.recent}</p>
           </CardContent>
         </Card>
@@ -133,7 +134,7 @@ export default function DashboardPage() {
       <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <Card className="border-0 shadow-xl shadow-primary/8">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-2xl">Today&apos;s Focus Queue</CardTitle>
+            <CardTitle className="text-2xl">Today&apos;s High Risk</CardTitle>
             <Link href="/app/cases" className="text-sm text-primary hover:underline">
               View all matters
             </Link>
@@ -152,21 +153,25 @@ export default function DashboardPage() {
             )}
             {!loading &&
               focusQueue.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-xl border bg-card p-4">
-                  <div>
-                    <p className="font-medium">{m.title}</p>
-                    <p className="text-xs text-muted-foreground">REF {m.ref} • Created {m.createdAt}</p>
+                <div key={m.id} className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 hover:border-indigo-300 hover:shadow-md transition-all">
+                  <div className="flex gap-4 items-center">
+                    <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-indigo-50 group-hover:border-indigo-100 transition-colors">
+                       <Scale className="h-5 w-5 text-slate-400 group-hover:text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900 group-hover:text-indigo-900 transition-colors">{m.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[10px] font-mono text-slate-400 border-slate-200 px-1.5">{m.ref}</Badge>
+                        <span className="text-[10px] text-slate-400">Created {m.createdAt}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/app/cases/${m.id}`}>
-                        Matter <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
-                      </Link>
+                  <div className="flex items-center gap-3">
+                    <Button asChild size="sm" variant="ghost" className="text-slate-500 hover:text-slate-900">
+                      <Link href={`/app/cases/${m.id}`}>Details</Link>
                     </Button>
-                    <Button asChild size="sm">
-                      <Link href={`/app/cases/${m.id}/review`}>
-                        Audit
-                      </Link>
+                    <Button asChild size="sm" className="bg-slate-900 hover:bg-indigo-600 shadow-sm px-4">
+                      <Link href={`/app/cases/${m.id}/review`}>Open Audit</Link>
                     </Button>
                   </div>
                 </div>
