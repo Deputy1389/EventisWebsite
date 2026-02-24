@@ -845,29 +845,56 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {!selectedEvent ? (
               <div className="space-y-6">
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                   <div className="flex items-center gap-2 mb-2">
-                     <Sparkles className="h-4 w-4 text-primary" />
-                     <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Strategic Brief</span>
+                <div className="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100 shadow-sm">
+                   <div className="flex items-center gap-2 mb-3">
+                     <div className="p-1.5 bg-indigo-600 rounded-lg text-white">
+                        <Sparkles className="h-4 w-4" />
+                     </div>
+                     <span className="text-xs font-bold uppercase tracking-[0.1em] text-indigo-900">Intelligence Brief</span>
                    </div>
-                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                     Automated screening of {packetPages} pages detected {countMoatSignals(commandCenter as unknown as Record<string, unknown>)} litigation signals. 
+                   <p className="text-[12px] text-indigo-900/80 leading-relaxed font-medium">
+                     Across {packetPages} pages, Linecite identified {events.length} clinical events and {countMoatSignals(commandCenter as unknown as Record<string, unknown>)} strategic signals. 
                    </p>
+                   <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="bg-white/60 p-2 rounded-lg border border-indigo-100/50">
+                         <div className="text-[10px] text-indigo-400 uppercase font-bold">Cites</div>
+                         <div className="text-sm font-bold text-indigo-900">{anchoredEvents} verified</div>
+                      </div>
+                      <div className="bg-white/60 p-2 rounded-lg border border-indigo-100/50">
+                         <div className="text-[10px] text-indigo-400 uppercase font-bold">Integrity</div>
+                         <div className="text-sm font-bold text-indigo-900">{chronologyIntegrity}%</div>
+                      </div>
+                   </div>
                 </div>
+
                 {commandCenter.contradictionMatrix.length > 0 && (
                   <div className="space-y-3">
-                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Risks</div>
-                    {commandCenter.contradictionMatrix.slice(0, 2).map((row, idx) => (
-                      <div key={`br-c-${idx}`} className="p-3 rounded-lg border-l-4 border-l-red-500 border bg-background text-xs">
-                        <div className="font-bold mb-1">{textFrom(row, ["category"], "Contradiction")}</div>
-                        <p className="text-muted-foreground line-clamp-2">{contradictionSummary(row)}</p>
+                    <div className="text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                      <ShieldAlert className="h-3 w-3" /> Defense Attack Vectors
+                    </div>
+                    {commandCenter.contradictionMatrix.slice(0, 3).map((row, idx) => (
+                      <div key={`brief-contra-${idx}`} className="p-4 rounded-xl border border-amber-100 bg-amber-50/30 shadow-sm text-xs hover:border-amber-200 transition-colors cursor-pointer">
+                        <div className="font-bold text-amber-900 mb-1.5 flex items-center justify-between">
+                           {textFrom(row, ["category", "contradiction_type"], "Risk")}
+                           <ChevronLeft className="h-3 w-3 rotate-180 opacity-40" />
+                        </div>
+                        <p className="text-amber-800/70 leading-snug">{contradictionSummary(row)}</p>
                       </div>
                     ))}
                   </div>
                 )}
-                <div className="pt-4 border-t">
-                  <Button variant="outline" className="w-full text-xs h-9 justify-between" onClick={() => { setViewerMode("chronology"); setViewerEnabled(true); setViewerKey(k => k + 1); }}>
-                    View Chronology PDF <FileText className="h-3.5 w-3.5 ml-2" />
+
+                <div className="pt-4 border-t border-dashed">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-[11px] font-bold h-10 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 justify-between px-4"
+                    onClick={() => {
+                      setViewerMode("chronology");
+                      setViewerEnabled(true);
+                      setViewerKey(k => k + 1);
+                    }}
+                  >
+                    Generate Full Draft Report <ExternalLink className="h-3.5 w-3.5 ml-2" />
                   </Button>
                 </div>
               </div>
