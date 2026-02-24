@@ -202,12 +202,7 @@ function textFrom(row: Record<string, unknown>, keys: string[], fallback = "N/A"
   return fallback;
 }
 
-function causationSummary(row: Record<string, unknown>): string {
-  // Try legacy keys first
-  for (const k of ["causation_thesis", "summary", "narrative"]) {
-    const v = row[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
-  }
+
   // Build from actual pipeline data shape
   const rungs = Array.isArray(row.rungs) ? row.rungs : [];
   const missing = Array.isArray(row.missing_rungs) ? row.missing_rungs : [];
@@ -317,7 +312,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   
   
   const [docPageCounts, setDocPageCounts] = useState<Record<string, number>>({});
-  const [activePanel, setActivePanel] = useState<"strategic" | "summary" | "chronology" | "vault">("strategic");
+  
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
@@ -617,19 +612,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     setViewerKey((k) => k + 1);
   }, [selectedEvent, selectedCitationId]);
 
-  const focusCitation = useCallback((citationId: string) => {
-    for (const event of events) {
-      const found = event.citations.find((c) => c.citation_id === citationId);
-      if (!found) continue;
-      setSelectedEventId(event.id);
-      setSelectedCitationId(citationId);
-      setViewerEnabled(true);
-      setViewerMode("source");
-      setViewerKey((k) => k + 1);
-      
-      return;
-    }
-  }, [events]);
+  
 
   const contradictionCountByEvent = useMemo(() => {
     const map = new Map<string, number>();
@@ -862,7 +845,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                      <span className="text-xs font-bold uppercase tracking-wider text-primary">Strategic Executive Brief</span>
                    </div>
                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                     Automated screening of {packetPages} pages detected {countMoatSignals(commandCenter as any)} litigation signals. 
+                     Automated screening of {packetPages} pages detected {countMoatSignals(commandCenter as unknown as Record<string, unknown>)} litigation signals. 
                      Select an event to verify source evidence.
                    </p>
                 </div>
