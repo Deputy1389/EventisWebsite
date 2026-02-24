@@ -1,40 +1,40 @@
-import { Link2, Search, ShieldCheck } from "lucide-react";
+import {  Search, ShieldCheck, Target } from "lucide-react";
 
 const pillars = [
   {
-    title: "Semantic Reasoning",
-    desc: "Our reasoning layer detects nuance. We find the 'hidden' prior injuries and contradicting statements that standard OCR tools miss.",
-    icon: Link2,
+    title: "Extraction is not Intelligence",
+    desc: "While others organize records, Linecite reveals leverage. We quantify defense side risk and map causation chains automatically.",
+    icon: Target,
   },
   {
-    title: "Litigation-Grade Logic",
-    desc: "We combine clinical ontologies with LLM reasoning to ensure 100% accuracy and zero narrative drift in high-stakes cases.",
+    title: "Litigation Infrastructure",
+    desc: "We provide the command-level system medical litigation has lacked. Unified intelligence, not just workflow assistance.",
     icon: Search,
   },
   {
-    title: "Litigation Guard Rails",
-    desc: "Quality and legal-usability checks surface weak spots before anything reaches an attorney or client-facing draft.",
+    title: "Category-Defining Moats",
+    desc: "Powered by a proprietary indexed litigation ontology and risk-scoring models refined for personal injury law.",
     icon: ShieldCheck,
   },
 ];
 
 export function WhyLinecite() {
   return (
-    <section className="py-18 md:py-24">
+    <section className="py-24 bg-[#0F1217]">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="mb-10 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Why Firms Switch</p>
-          <h2 className="mt-2 text-3xl md:text-4xl">Built to stand up in litigation, not just look nice in demos</h2>
+        <div className="mb-16 text-center max-w-3xl mx-auto">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C6A85E] mb-4">The Linecite Edge</p>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">We do not organize records. We reveal leverage.</h2>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3">
           {pillars.map((item) => (
-            <div key={item.title} className="rounded-3xl border bg-background/80 p-6 shadow-xl shadow-primary/5">
-              <div className="mb-4 inline-flex rounded-xl bg-primary p-2 text-primary-foreground">
-                <item.icon className="h-5 w-5" />
+            <div key={item.title} className="bg-[#161B22] border border-[#232A34] rounded-3xl p-8 shadow-2xl hover:-translate-y-1 transition-all">
+              <div className="mb-6 inline-flex rounded-xl bg-[#0F1217] border border-[#232A34] p-3 text-[#C6A85E]">
+                <item.icon className="h-6 w-6" />
               </div>
-              <h3 className="text-2xl">{item.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
+              <h3 className="text-2xl font-bold text-white mb-4">{item.title}</h3>
+              <p className="text-sm text-[#9CA3AF] leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -42,4 +42,3 @@ export function WhyLinecite() {
     </section>
   );
 }
-

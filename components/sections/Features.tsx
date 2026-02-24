@@ -1,51 +1,57 @@
-import { Brain, FileText, ShieldCheck } from "lucide-react";
+import { Activity, ShieldAlert, GitBranch, FileSpreadsheet } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const features = [
   {
-    title: "Semantic Reasoning",
-    description: "Our LLM reasoning layer cross-references thousands of pages to find subtle contradictions and case-winning claims.",
-    icon: Brain,
+    title: "Defense Exposure Engine™",
+    description: "Surface every prior injury, inconsistent report, and clinical denial hidden in thousands of pages.",
+    icon: ShieldAlert,
     bullets: ["Prior-injury detection", "Deposition-ready 'Smoking Guns'", "Automatic ICD-10 cross-referencing"],
   },
   {
-    title: "Injury Arc Chronology",
-    description: "Clinical-grade timelines that prioritize high-impact events like MRIs, fractures, and surgeries for immediate review.",
-    icon: FileText,
-    bullets: ["Hot-event highlighting", "Page-level citation anchors", "Direct DOCX/PDF export"],
+    title: "Causation Mapping System™",
+    description: "Map direct clinical paths from incident mechanics to objective diagnostic outcomes.",
+    icon: GitBranch,
+    bullets: ["Automated causation rungs", "Mechanical-Clinical linking", "ICD consistency checks"],
   },
   {
-    title: "Strategic Moat Analysis",
-    description: "Detect treatment gaps, missing records, and defense attack paths before the other side finds them.",
-    icon: ShieldCheck,
-    bullets: ["Referral gap detection", "Defense exposure screening", "Audit-first validation"],
+    title: "Narrative Engine™",
+    description: "Transform chronological records into court-ready chronological arguments and tactical timelines.",
+    icon: Activity,
+    bullets: ["Continuum™ Record Layer", "Argument Mode Visualization", "Strategic Case Briefs"],
+  },
+  {
+    title: "Intelligence Brief™",
+    description: "Generate expert-level litigation intelligence reports formatted for immediate demand usage.",
+    icon: FileSpreadsheet,
+    bullets: ["Court-ready formatting", "Page-anchored citations", "Direct DOCX/PDF delivery"],
   },
 ];
 
 export function Features() {
   return (
-    <section className="py-18 md:py-24">
+    <section className="py-24 bg-[#0F1217] relative">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="mb-12 max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Platform Capabilities</p>
-          <h2 className="mt-3 text-3xl md:text-4xl">Everything your litigation team needs from one upload</h2>
+        <div className="mb-16 max-w-3xl">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C6A85E] mb-4">Intelligence Infrastructure</p>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">Everything your litigation team needs from one upload.</h2>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
-            <Card key={feature.title} className="legal-glass border-0 shadow-xl shadow-primary/8">    
+            <Card key={feature.title} className="bg-[#161B22] border-[#232A34] shadow-2xl hover:border-[#C6A85E]/30 transition-all group">
               <CardHeader>
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                  <feature.icon className="h-5 w-5" />
+                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#0F1217] border border-[#232A34] text-[#C6A85E] group-hover:bg-[#C6A85E] group-hover:text-black transition-colors">
+                  <feature.icon className="h-6 w-6" />
                 </div>
-                <CardTitle className="text-2xl">{feature.title}</CardTitle>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <CardTitle className="text-xl font-bold text-white">{feature.title}</CardTitle>
+                <p className="text-sm text-[#9CA3AF] leading-relaxed mt-2">{feature.description}</p>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-3 text-xs">
                 {feature.bullets.map((item) => (
-                  <div key={item} className="flex items-start gap-2">
-                    <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
+                  <div key={item} className="flex items-start gap-2 text-[#F3F5F7] font-medium">
+                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-[#C6A85E]" />
                     <span>{item}</span>
                   </div>
                 ))}

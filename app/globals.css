@@ -83,63 +83,55 @@
   --sidebar-ring: oklch(0.37 0.085 58);
 }
 
+
 .dark {
-  --background: oklch(0.2 0.02 72);
-  --foreground: oklch(0.94 0.01 78);
-  --card: oklch(0.24 0.02 72);
-  --card-foreground: oklch(0.94 0.01 78);
-  --popover: oklch(0.24 0.02 72);
-  --popover-foreground: oklch(0.94 0.01 78);
-  --primary: oklch(0.76 0.07 72);
-  --primary-foreground: oklch(0.2 0.02 72);
-  --secondary: oklch(0.28 0.02 72);
-  --secondary-foreground: oklch(0.92 0.01 78);
-  --muted: oklch(0.28 0.02 72);
-  --muted-foreground: oklch(0.72 0.02 76);
-  --accent: oklch(0.31 0.02 72);
-  --accent-foreground: oklch(0.92 0.01 78);
-  --destructive: oklch(0.62 0.2 28);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.33 0.02 72);
-  --input: oklch(0.33 0.02 72);
-  --ring: oklch(0.76 0.07 72);
-  --sidebar: oklch(0.22 0.02 72);
-  --sidebar-foreground: oklch(0.93 0.01 78);
-  --sidebar-primary: oklch(0.76 0.07 72);
-  --sidebar-primary-foreground: oklch(0.2 0.02 72);
-  --sidebar-accent: oklch(0.3 0.02 72);
-  --sidebar-accent-foreground: oklch(0.93 0.01 78);
-  --sidebar-border: oklch(0.34 0.02 72);
-  --sidebar-ring: oklch(0.76 0.07 72);
+  --background: #0F1217;
+  --foreground: #F3F5F7;
+  --card: #161B22;
+  --card-foreground: #F3F5F7;
+  --popover: #161B22;
+  --popover-foreground: #F3F5F7;
+  --primary: #C6A85E;
+  --primary-foreground: #0F1217;
+  --secondary: #232A34;
+  --secondary-foreground: #F3F5F7;
+  --muted: #161B22;
+  --muted-foreground: #9CA3AF;
+  --accent: #274C77;
+  --accent-foreground: #F3F5F7;
+  --destructive: #7A1E1E;
+  --destructive-foreground: #F3F5F7;
+  --border: #232A34;
+  --input: #232A34;
+  --ring: #C6A85E;
+  --sidebar: #161B22;
+  --sidebar-foreground: #F3F5F7;
+  --sidebar-primary: #C6A85E;
+  --sidebar-primary-foreground: #0F1217;
+  --sidebar-accent: #232A34;
+  --sidebar-accent-foreground: #F3F5F7;
+  --sidebar-border: #232A34;
+  --sidebar-ring: #C6A85E;
 }
+
 
 @layer base {
   * {
     @apply border-border outline-ring/40;
   }
 
-  body {
-    @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(circle at 15% 0%, color-mix(in oklab, var(--accent) 45%, transparent) 0%, transparent 40%),
-      radial-gradient(circle at 85% 15%, color-mix(in oklab, var(--primary) 15%, transparent) 0%, transparent 35%);
-  }
+    body { @apply bg-background text-foreground; }
 
   h1,
   h2,
   h3 {
-    font-family: var(--font-spectral), serif;
+    font-family: 'EB Garamond', serif;
     letter-spacing: -0.01em;
   }
 }
 
 @layer utilities {
-  .fancy-grid {
-    background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--border) 65%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--border) 65%, transparent) 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
+  .fancy-grid { background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 24px 24px; }
 
   .legal-glass {
     background: color-mix(in oklab, var(--card) 86%, transparent);
@@ -147,12 +139,7 @@
     border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
   }
 
-  .text-gradient {
-    background: linear-gradient(120deg, color-mix(in oklab, var(--primary) 90%, black) 0%, color-mix(in oklab, var(--accent-foreground) 70%, var(--primary)) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+  .text-gradient { @apply bg-clip-text text-transparent bg-gradient-to-r from-[#C6A85E] to-[#F3F5F7]; }
 
   .float-in {
     animation: float-in 0.55s ease-out both;

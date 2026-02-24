@@ -6,79 +6,93 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 
 const plans = [
   {
-    title: "Chronology Core",
-    price: "$150",
-    note: "Per matter",
+    title: "Foundation",
+    price: "$4,000",
+    note: "/month",
     items: [
-      "Chronology output (DOCX/PDF)",
-      "Packet-linked citations",
-      "Up to 500 pages",
-      "Audit Mode verification",
+      "Defense Exposure Index™",
+      "Causation Confidence Index™",
+      "VectorStream™ Alert Feed",
+      "Intelligence Brief™ Generation",
+      "Priority Clinical Mapping",
     ],
     highlight: false,
   },
   {
-    title: "Litigation Suite",
-    price: "$250",
-    note: "Per matter",
+    title: "Strategic",
+    price: "$15,000",
+    note: "/month",
     items: [
-      "Everything in Chronology Core",
-      "Specials summary output",
-      "Missing-record strategy report",
-      "Up to 1000 pages",
+      "Unlimited Matters",
+      "Full Narrative Engine™ Access",
+      "Shield Matrix™ Vulnerability Analysis",
+      "API & Workflow Integration",
+      "White-labeled Briefs",
     ],
     highlight: true,
+  },
+  {
+    title: "Institutional",
+    price: "$250k+",
+    note: "/year",
+    items: [
+      "Dedicated Intelligence Cluster",
+      "Custom Ontology Tuning",
+      "Private Cloud Deployment",
+      "Enterprise Integrations",
+      "Trial Simulation Support",
+    ],
+    highlight: false,
   },
 ];
 
 export function Pricing() {
   return (
-    <section className="bg-secondary/45 py-18 md:py-24" id="pricing">
+    <section className="bg-[#0F1217] py-24 border-t border-[#232A34]" id="pricing">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="mb-10 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Pricing</p>
-          <h2 className="mt-2 text-3xl md:text-4xl">Straightforward per-case pricing for legal operations</h2>
+        <div className="mb-16 text-center max-w-2xl mx-auto">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C6A85E] mb-4">Infrastructure Pricing</p>
+          <h2 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">Mission Critical Positioning for Legal Teams</h2>
         </div>
 
-        <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-2">
+        <div className="mx-auto grid gap-6 md:grid-cols-3">
           {plans.map((plan) => (
             <Card
               key={plan.title}
-              className={`relative border ${plan.highlight ? "border-primary shadow-2xl shadow-primary/15" : "border-border/80"} bg-background/90`}
+              className={`relative border ${plan.highlight ? "border-[#C6A85E] shadow-2xl shadow-[#C6A85E]/10" : "border-[#232A34]"} bg-[#161B22]`}
             >
               {plan.highlight && (
-                <span className="absolute right-4 top-4 rounded-full bg-primary px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-primary-foreground">
-                  Recommended
+                <span className="absolute right-4 top-4 rounded-full bg-[#C6A85E] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.1em] text-black">
+                  Strategic Choice
                 </span>
               )}
               <CardHeader>
-                <CardTitle className="text-2xl">{plan.title}</CardTitle>
-                <p className="text-4xl font-semibold">
-                  {plan.price} <span className="text-base font-normal text-muted-foreground">{plan.note}</span>
+                <CardTitle className="text-xl font-bold text-white uppercase tracking-wider">{plan.title}</CardTitle>
+                <p className="mt-4 text-4xl font-extrabold text-white">
+                  {plan.price} <span className="text-sm font-medium text-[#9CA3AF] tracking-normal">{plan.note}</span>
                 </p>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
+              <CardContent className="space-y-4 pt-4">
                 {plan.items.map((item) => (
-                  <p key={item} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary" />
-                    {item}
-                  </p>
+                  <div key={item} className="flex items-start gap-3">
+                    <Check className="h-4 w-4 text-[#C6A85E] mt-0.5" />
+                    <span className="text-sm text-[#F3F5F7] font-medium leading-tight">{item}</span>
+                  </div>
                 ))}
               </CardContent>
-              <CardFooter>
-                <Button asChild className="w-full" variant={plan.highlight ? "default" : "outline"}>
-                  <Link href="/pilot">Start Pilot</Link>
+              <CardFooter className="pt-8">
+                <Button asChild className="w-full h-12 font-bold bg-[#C6A85E] hover:bg-[#B08D4A] text-black shadow-lg shadow-[#C6A85E]/10" variant={plan.highlight ? "default" : "outline"}>
+                  <Link href="/pilot">REQUEST DEMO</Link>
                 </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Enterprise-volume pricing available for firms with recurring docket throughput.
+        <p className="mt-12 text-center text-xs text-[#9CA3AF] font-bold uppercase tracking-widest">
+          No per-seat pricing. Pure intelligence infrastructure.
         </p>
       </div>
     </section>
   );
 }
-
