@@ -816,6 +816,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               </div>
             ) : filteredEvents.map((e) => {
               const active = selectedEvent?.id === e.id;
+              const isHot = /(mri|ct|xray|imaging|surgery|procedure|fracture|herniation|surgical|hospital)/i.test(e.summary + e.eventType);
               const contradictionCount = contradictionCountByEvent.get(e.id) || 0;
               const tags = deriveTags(e.eventType, e.summary);
               return (
@@ -826,8 +827,9 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                     setSelectedEventId(e.id);
                     setViewerEnabled(true);
                   }}
-                  className={`w-full text-left border rounded-lg p-3 transition-all ${active ? "border-primary bg-primary/[0.04] ring-1 ring-primary/20 shadow-sm" : "hover:border-primary/40 bg-background"}`}
+                  className={`w-full text-left border rounded-lg p-3 transition-all ${active ? "border-primary bg-primary/[0.04] ring-1 ring-primary/20 shadow-sm" : isHot ? "border-amber-200 bg-amber-50/40 hover:border-amber-300 shadow-sm" : "hover:border-primary/40 bg-background"}`}
                 >
+                  {isHot && !active && <div className="flex items-center gap-1 text-[9px] font-bold text-amber-600 uppercase mb-2"><Sparkles className="h-3 w-3" /> Critical Evidence</div>}
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-bold text-foreground">{e.dateLabel}</span>
                     <Badge variant="secondary" className="text-[8px] h-4 px-1">{e.eventType}</Badge>
@@ -852,22 +854,59 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {!selectedEvent ? (
-              <div className="flex flex-col items-center justify-center py-10 px-4 text-center border-2 border-dashed rounded-xl bg-background/50">
-                <FileText className="h-8 w-8 text-primary/40 mb-3" />
-                <div className="text-sm font-semibold mb-1">No Event Selected</div>
-                <p className="text-[11px] text-muted-foreground mb-4">Click any timeline event to see its specific risks and source evidence.</p>
-                <div className="w-full h-px bg-border mb-4" />
-                <Button 
-                  variant="secondary" 
-                  className="w-full text-xs h-9"
-                  onClick={() => {
-                    setViewerMode("chronology");
-                    setViewerEnabled(true);
-                    setViewerKey(k => k + 1);
-                  }}
-                >
-                  Open Generated Chronology PDF
-                </Button>
+              <div className="space-y-6">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
+                   <div className="flex items-center gap-2 mb-2">
+                     <Sparkles className="h-4 w-4 text-primary" />
+                     <span className="text-xs font-bold uppercase tracking-wider text-primary">Strategic Executive Brief</span>
+                   </div>
+                   <p className="text-[11px] text-muted-foreground leading-relaxed">
+                     Automated screening of {packetPages} pages detected {countMoatSignals(commandCenter as any)} litigation signals. 
+                     Select an event to verify source evidence.
+                   </p>
+                </div>
+
+                {commandCenter.contradictionMatrix.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-1">
+                      <ShieldAlert className="h-3 w-3" /> Top Defense Risks (Smoking Guns)
+                    </div>
+                    {commandCenter.contradictionMatrix.slice(0, 2).map((row, idx) => (
+                      <div key={`brief-contra-${idx}`} className="p-3 rounded-lg border-l-4 border-l-red-500 border bg-background shadow-sm text-xs">
+                        <div className="font-bold text-foreground mb-1">{textFrom(row, ["category", "contradiction_type"], "Contradiction")}</div>
+                        <p className="text-muted-foreground line-clamp-2">{contradictionSummary(row)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {commandCenter.claimRows.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="text-[10px] font-bold text-green-700 uppercase tracking-widest flex items-center gap-1">
+                      <Scale className="h-3 w-3" /> Key Damages / Claims
+                    </div>
+                    {commandCenter.claimRows.slice(0, 2).map((row, idx) => (
+                      <div key={`brief-claim-${idx}`} className="p-3 rounded-lg border-l-4 border-l-green-500 border bg-background shadow-sm text-xs">
+                        <div className="font-bold text-foreground mb-1">{textFrom(row, ["claim_type"], "Claim")}</div>
+                        <p className="text-muted-foreground line-clamp-2">{textFrom(row, ["assertion", "summary"], "")}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs h-9 justify-between"
+                    onClick={() => {
+                      setViewerMode("chronology");
+                      setViewerEnabled(true);
+                      setViewerKey(k => k + 1);
+                    }}
+                  >
+                    View Full Chronology PDF <FileText className="h-3.5 w-3.5 ml-2" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <>
