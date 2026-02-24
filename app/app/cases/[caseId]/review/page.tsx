@@ -270,12 +270,6 @@ function countMoatSignals(ext: Record<string, unknown>): number {
 
 
 
- ${summary}`.toLowerCase();
-  if (/(surgery|procedure|hospital|admission|discharge|er|emergency|fracture|herniation)/.test(blob)) return "High";
-  if (/(imaging|mri|ct|xray|injection|epidural|radiculopathy|severe)/.test(blob)) return "Med";
-  return "Low";
-}
-
 function deriveTags(eventType: string, summary: string): string[] {
   const blob = `${eventType} ${summary}`.toLowerCase();
   const tags = new Set<string>();
@@ -631,7 +625,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       setViewerEnabled(true);
       setViewerMode("source");
       setViewerKey((k) => k + 1);
-      setMobilePane("viewer");
+      
       return;
     }
   }, [events]);
