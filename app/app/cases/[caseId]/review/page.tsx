@@ -9,6 +9,7 @@ import {
   Loader2,
   Scale,
   Search,
+  Sparkles,
   ShieldAlert,
 } from "lucide-react";
 
