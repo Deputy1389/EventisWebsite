@@ -3,8 +3,8 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ChevronsDown,
-  ChevronsUp,
+  
+  
   ChevronLeft,
   ExternalLink,
   FileText,
@@ -16,7 +16,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs,  TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseApiError } from "@/lib/api-error";
 
 type Run = {
@@ -270,13 +270,13 @@ function countMoatSignals(ext: Record<string, unknown>): number {
   return total;
 }
 
-function deriveImpact(score: number): "Low" | "Med" | "High" {
+function _deriveImpact(score: number): "Low" | "Med" | "High" {
   if (score >= 70) return "High";
   if (score >= 40) return "Med";
   return "Low";
 }
 
-function deriveSeverity(eventType: string, summary: string): "Low" | "Med" | "High" {
+function _deriveSeverity(eventType: string, summary: string): "Low" | "Med" | "High" {
   const blob = `${eventType} ${summary}`.toLowerCase();
   if (/(surgery|procedure|hospital|admission|discharge|er|emergency|fracture|herniation)/.test(blob)) return "High";
   if (/(imaging|mri|ct|xray|injection|epidural|radiculopathy|severe)/.test(blob)) return "Med";
@@ -326,8 +326,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [viewerEnabled, setViewerEnabled] = useState(false);
   const [viewerMode, setViewerMode] = useState<"source" | "chronology">("source");
   const [viewerKey, setViewerKey] = useState(0);
-  const [mobilePane, setMobilePane] = useState<"events" | "viewer">("events");
-  const [dockCollapsed, setDockCollapsed] = useState(false);
+  // // // // const [mobilePane, setMobilePane] = useState<"events" | "viewer">("events");
+  // // const [dockCollapsed, setDockCollapsed] = useState(false);
   const [docPageCounts, setDocPageCounts] = useState<Record<string, number>>({});
   const [activePanel, setActivePanel] = useState<"strategic" | "summary" | "chronology" | "vault">("strategic");
 
@@ -364,7 +364,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
   const selectedPage = selectedCitation?.page_number || null;
-  const selectedDocumentPages = selectedDocument ? docPageCounts[selectedDocument.id] || null : null;
+  // // const selectedDocumentPages = selectedDocument ? docPageCounts[selectedDocument.id] || null : null;
   const viewerHref = viewerMode === "chronology" && latestRun
     ? `/api/citeline/runs/${latestRun.id}/artifacts/pdf`
     : selectedDocument
@@ -641,7 +641,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       setViewerEnabled(true);
       setViewerMode("source");
       setViewerKey((k) => k + 1);
-      setMobilePane("viewer");
+      // // setMobilePane("viewer");
       return;
     }
   }, [events]);
@@ -673,13 +673,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const anchoredEvents = events.filter((e) => e.citations.length > 0).length;
   const citationCoverage = events.length ? Math.round((anchoredEvents / events.length) * 100) : 0;
   const auditScoreRaw = latestRun?.metrics?.audit_score;
-  const auditScore = typeof auditScoreRaw === "number" ? String(Math.round(auditScoreRaw)) : "N/A";
+  // // const auditScore = typeof auditScoreRaw === "number" ? String(Math.round(auditScoreRaw)) : "N/A";
   const qualityGate = commandCenter.qualityGate || {};
   const filteredCount = Number(qualityGate.num_snippets_filtered || 0);
-  const cleanedCount = Number(qualityGate.num_snippets_cleaned || 0);
-  const noiseRisk = filteredCount > 10 ? "High" : filteredCount > 3 ? "Med" : "Low";
-  const evidenceCoverageLabel = citationCoverage >= 70 ? "Strong" : citationCoverage >= 40 ? "Moderate" : "Weak";
-  const defenseRisk = commandCenter.defenseAttackPaths.length > 0 || commandCenter.contradictionMatrix.length > 0 ? "Med" : "Low";
+  // // const cleanedCount = Number(qualityGate.num_snippets_cleaned || 0);
+  // // const noiseRisk = filteredCount > 10 ? "High" : filteredCount > 3 ? "Med" : "Low";
+  // // const evidenceCoverageLabel = citationCoverage >= 70 ? "Strong" : citationCoverage >= 40 ? "Moderate" : "Weak";
+  // // const defenseRisk = commandCenter.defenseAttackPaths.length > 0 || commandCenter.contradictionMatrix.length > 0 ? "Med" : "Low";
   const chronologyIntegrity = Math.min(100, Math.round((anchoredEvents / Math.max(1, events.length)) * 100));
 
   if (isLoading) {
@@ -795,7 +795,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         {/* Left Sidebar */}
         <div className="w-[400px] xl:w-[480px] flex flex-col bg-card border rounded-xl shadow-sm shrink-0">
           <div className="p-2 border-b bg-muted/10 shrink-0">
-            <Tabs value={activePanel === "strategic" ? "strategic" : "chronology"} onValueChange={(v) => setActivePanel(v as any)} className="w-full">
+            <Tabs value={activePanel === "strategic" ? "strategic" : "chronology"} onValueChange={(v) => setActivePanel(v as "strategic" | "summary" | "chronology" | "vault")} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="chronology">Timeline</TabsTrigger>
                 <TabsTrigger value="strategic">Strategic Moat</TabsTrigger>
