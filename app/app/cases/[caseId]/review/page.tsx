@@ -742,7 +742,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   return (
     <div className="h-screen -m-8 flex flex-col bg-background text-foreground">
-      <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
+      <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href={`/app/cases/${caseId}`}>
@@ -754,18 +754,15 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             <Scale className="h-4 w-4 text-primary" />
             <h1 className="text-sm font-semibold truncate">Audit Mode: {matterTitle}</h1>
           </div>
-          <div className="hidden xl:flex items-center gap-1 text-[11px] text-muted-foreground">
+          <div className="hidden xl:flex items-center gap-3 text-[11px] text-muted-foreground ml-4">
             <Badge variant="outline">{packetFilename}</Badge>
             <Badge variant="outline">{packetPages || "?"} pages</Badge>
-            <Badge variant="outline">Chronology Integrity {chronologyIntegrity}/100</Badge>
-            <Badge variant="outline">Evidence Coverage {evidenceCoverageLabel}</Badge>
-            <Badge variant="outline">Noise Risk {noiseRisk}</Badge>
-            <Badge variant="outline">Defense Risk {defenseRisk}</Badge>
+            <Badge variant="outline">Integrity {chronologyIntegrity}/100</Badge>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Badge variant={latestRun ? "default" : "outline"} className="text-[10px] uppercase tracking-wide">
-            {hasActiveRuns ? "Processing" : latestRun ? "Verification Ready" : "Waiting For Run"}
+            {hasActiveRuns ? "Processing" : latestRun ? "Ready" : "Waiting"}
           </Badge>
           {latestRun && (
             <Button size="sm" asChild>
@@ -778,378 +775,217 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       </div>
 
       {error && !hasActiveRuns && (
-        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 shrink-0">
           <div className="flex items-center justify-between gap-3">
             <span>{error}</span>
             {!hasActiveRuns && (
               <Button size="sm" variant="outline" onClick={() => void triggerReprocess()} disabled={isReprocessing}>
-                {isReprocessing ? (
-                  <>
-                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                    Starting...
-                  </>
-                ) : (
-                  "Re-run with latest exporter"
-                )}
+                {isReprocessing ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                {isReprocessing ? "Starting..." : "Re-run"}
               </Button>
             )}
           </div>
         </div>
       )}
 
-      <div className="mx-6 mt-3 space-y-2">
-        {events.length > 0 && commandCenter.claimRows.length === 0 && (
-          <div className="rounded-md border border-amber-300/50 bg-amber-500/10 px-3 py-2 text-sm">
-            Events extracted. Promote an event to create a Claim.
+      <div className="flex-1 overflow-hidden p-6 flex gap-6">
+        {/* Left Sidebar */}
+        <div className="w-[400px] xl:w-[480px] flex flex-col bg-card border rounded-xl shadow-sm shrink-0">
+          <div className="p-2 border-b bg-muted/10 shrink-0">
+            <Tabs value={activePanel === "strategic" ? "strategic" : "chronology"} onValueChange={(v) => setActivePanel(v as any)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="chronology">Timeline</TabsTrigger>
+                <TabsTrigger value="strategic">Strategic Moat</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
-        )}
-        {events.length > 0 && anchoredEvents === 0 && (
-          <div className="rounded-md border border-red-300/50 bg-red-500/10 px-3 py-2 text-sm">
-            Citation anchoring incomplete. Review extraction settings.
-          </div>
-        )}
-      </div>
 
-      <div className="mx-6 mt-3 flex flex-wrap gap-2">
-        <Button size="sm" variant={activePanel === "strategic" ? "default" : "outline"} onClick={() => setActivePanel("strategic")}>
-          Strategic Overview
-        </Button>
-        <Button size="sm" variant={activePanel === "summary" ? "default" : "outline"} onClick={() => setActivePanel("summary")}>
-          Injury Arc
-        </Button>
-        <Button size="sm" variant={activePanel === "chronology" ? "default" : "outline"} onClick={() => setActivePanel("chronology")}>
-          Chronology
-        </Button>
-        <Button size="sm" variant={activePanel === "vault" ? "default" : "outline"} onClick={() => setActivePanel("vault")}>
-          Evidence Vault
-        </Button>
-      </div>
-
-      {activePanel === "strategic" && (
-        <div className="mx-6 mt-3 mb-6 grid gap-4">
-          <div className="border rounded-lg bg-card p-4">
-            <div className="text-sm font-semibold mb-3">Strategic Overview (Moat)</div>
-            {countMoatSignals(commandCenter as Record<string, unknown>) === 0 ? (
-              <div className="text-sm text-muted-foreground">No strategic flags detected in this record set.</div>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {[...commandCenter.collapseCandidates, ...commandCenter.defenseAttackPaths, ...commandCenter.contradictionMatrix, ...commandCenter.causationChains].slice(0, 10).map((row, idx) => {
-                  const score = Number(row.fragility_score || row.confidence || 50);
-                  const impact = deriveImpact(score);
-                  const citationIds = collectCitationIds(row);
-                  return (
-                    <div key={`moat-${idx}`} className="border rounded-md p-3 text-xs space-y-2">
-                      <div className="font-medium">{textFrom(row, ["title", "fragility_type", "attack", "category", "body_region"], "Strategic Signal")}</div>
-                      <div className="text-muted-foreground">{textFrom(row, ["why", "path", "description", "analysis", "summary", "causation_thesis"], "Litigation implication not available.")}</div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">Impact {impact}</Badge>
-                        <Badge variant="outline">Confidence {Math.round(score)}</Badge>
-                        <Badge variant="outline">Cites {citationIds.length}</Badge>
-                        {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>View Evidence</Button>}
-                      </div>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {activePanel !== "strategic" && (
+              <div className="flex-1 flex flex-col">
+                <div className="p-3 border-b shrink-0">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <input
+                      className="w-full border rounded-md py-2 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary bg-background"
+                      placeholder="Search events, symptoms..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {isGraphLoading && (
+                    <div className="text-xs text-muted-foreground flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading timeline...
                     </div>
-                  );
-                })}
+                  )}
+                  {!isGraphLoading && filteredEvents.length === 0 && (
+                    <div className="text-sm text-muted-foreground text-center p-8">No events found.</div>
+                  )}
+                  {filteredEvents.map((e) => {
+                    const active = selectedEvent?.id === e.id;
+                    const contradictionCount = contradictionCountByEvent.get(e.id) || 0;
+                    const tags = deriveTags(e.eventType, e.summary);
+                    return (
+                      <button
+                        type="button"
+                        key={e.id}
+                        onClick={() => {
+                          setSelectedEventId(e.id);
+                          setViewerEnabled(true);
+                        }}
+                        className={`w-full text-left border rounded-lg p-3 transition-all ${active ? "border-primary bg-primary/[0.03] shadow-sm" : "hover:border-primary/50 bg-background"}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] font-semibold text-foreground">{e.dateLabel}</span>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="secondary" className="text-[9px] px-1.5">{e.eventType}</Badge>
+                            {contradictionCount > 0 && <Badge variant="destructive" className="text-[9px] px-1.5">{contradictionCount} Flags</Badge>}
+                          </div>
+                        </div>
+                        <p className="text-xs leading-relaxed text-muted-foreground line-clamp-3">{e.summary}</p>
+                        <div className="mt-3 flex items-center justify-between">
+                           <div className="flex flex-wrap gap-1">
+                             {tags.slice(0, 3).map((t) => <Badge key={`${e.id}-${t}`} variant="outline" className="text-[9px] bg-background">{t}</Badge>)}
+                           </div>
+                           <span className="text-[10px] text-muted-foreground font-medium">{e.citations.length} cites</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {activePanel === "strategic" && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-muted/5">
+                {countMoatSignals(commandCenter as Record<string, unknown>) === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center p-8">No strategic flags detected.</div>
+                ) : (
+                  <>
+                    {commandCenter.claimRows.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5" /> Claims</h3>
+                        {commandCenter.claimRows.map((row, idx) => {
+                          const citationIds = collectCitationIds(row);
+                          return (
+                            <div key={`s-claim-${idx}`} className="border rounded-lg p-3 text-xs bg-background shadow-sm">
+                              <div className="font-medium mb-1">{textFrom(row, ["claim_type"], "Claim")}</div>
+                              <div className="text-muted-foreground mb-2">{textFrom(row, ["assertion", "summary"], "No details.")}</div>
+                              {citationIds[0] && <Button size="sm" variant="secondary" className="w-full text-xs h-7" onClick={() => focusCitation(citationIds[0])}>View Evidence</Button>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    
+                    {commandCenter.contradictionMatrix.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Contradictions</h3>
+                        {commandCenter.contradictionMatrix.map((row, idx) => {
+                          const citationIds = collectCitationIds(row);
+                          return (
+                            <div key={`s-contra-${idx}`} className="border rounded-lg p-3 text-xs bg-background shadow-sm">
+                              <div className="font-medium mb-1">{textFrom(row, ["category", "contradiction_type"], "Contradiction").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
+                              <div className="text-muted-foreground mb-2">{contradictionSummary(row)}</div>
+                              {citationIds[0] && <Button size="sm" variant="secondary" className="w-full text-xs h-7" onClick={() => focusCitation(citationIds[0])}>View Evidence</Button>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {commandCenter.causationChains.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5 text-blue-500" /> Causation</h3>
+                        {commandCenter.causationChains.map((row, idx) => {
+                          const citationIds = collectCitationIds(row);
+                          return (
+                            <div key={`s-cause-${idx}`} className="border rounded-lg p-3 text-xs bg-background shadow-sm">
+                              <div className="font-medium mb-1">{textFrom(row, ["body_region"], "General").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
+                              <div className="text-muted-foreground mb-2">{causationSummary(row)}</div>
+                              {citationIds[0] && <Button size="sm" variant="secondary" className="w-full text-xs h-7" onClick={() => focusCitation(citationIds[0])}>View Evidence</Button>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {commandCenter.defenseAttackPaths.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><ShieldAlert className="h-3.5 w-3.5 text-red-500" /> Defense Risks</h3>
+                        {commandCenter.defenseAttackPaths.map((row, idx) => {
+                          const citationIds = collectCitationIds(row);
+                          return (
+                            <div key={`s-def-${idx}`} className="border rounded-lg p-3 text-xs bg-background shadow-sm">
+                              <div className="font-medium mb-1">{textFrom(row, ["attack", "attack_vector", "title"], "Defense Path")}</div>
+                              <div className="text-muted-foreground mb-2">{textFrom(row, ["path", "description", "summary"], "No details.")}</div>
+                              {citationIds[0] && <Button size="sm" variant="secondary" className="w-full text-xs h-7" onClick={() => focusCitation(citationIds[0])}>View Evidence</Button>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>
         </div>
-      )}
 
-      {activePanel === "summary" && (
-        <div className="mx-6 mt-3 mb-6 grid gap-4">
-          <div className="border rounded-lg bg-card p-4 space-y-3">
-            <div className="text-sm font-semibold">Injury Arc Summary</div>
-            <div className="text-sm text-muted-foreground">
-              Anchored events: {anchoredEvents} of {events.length}. Evidence coverage: {evidenceCoverageLabel}. Noise risk: {noiseRisk}.
-            </div>
-            <div className="space-y-2">
-              {events.slice(0, 5).map((e) => (
-                <div key={`summary-${e.id}`} className="border rounded-md p-2 text-xs">
-                  <div className="font-medium">{e.dateLabel} - {e.eventType}</div>
-                  <div className="text-muted-foreground">{e.summary}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activePanel === "chronology" && (
-        <div className={`flex-1 overflow-hidden mt-3 mx-6 ${selectedEvent ? "mb-2" : "mb-6"} grid [@media(min-width:1100px)]:grid-cols-[35%_65%] gap-4`}>
-          <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "viewer" ? "hidden [@media(min-width:1100px)]:flex" : "flex"}`}>
-            <div className="p-3 border-b">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <input
-                  className="w-full border rounded-md py-2 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  placeholder="Search events, symptoms, procedures..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
+        {/* Right Pane: Document Viewer */}
+        <div className="flex-1 flex flex-col bg-card border rounded-xl shadow-sm min-w-0">
+          <div className="h-14 px-4 border-b flex items-center justify-between bg-muted/10 shrink-0">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Record Viewer</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` (Page ${selectedPage})` : ""}` : "No selection"}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {isGraphLoading && (
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading event graph...
-                </div>
-              )}
-              {!isGraphLoading && filteredEvents.length === 0 && (
-                <div className="text-sm text-muted-foreground p-2">No events available yet. Run analysis to populate Audit Mode.</div>
-              )}
-              {filteredEvents.map((e) => {
-                const active = selectedEvent?.id === e.id;
-                const contradictionCount = contradictionCountByEvent.get(e.id) || 0;
-                const tags = deriveTags(e.eventType, e.summary);
-                const severity = deriveSeverity(e.eventType, e.summary);
-                return (
-                  <button
-                    type="button"
-                    key={e.id}
-                    onClick={() => setSelectedEventId(e.id)}
-                    className={`w-full text-left border rounded-md p-3 transition ${active ? "border-primary bg-primary/5" : "hover:border-slate-300"}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{e.dateLabel}</span>
-                      <div className="flex items-center gap-1">
-                        <Badge variant="secondary" className="text-[9px]">{e.eventType}</Badge>
-                        <Badge variant="outline" className="text-[9px]">Severity {severity}</Badge>
-                        {contradictionCount > 0 && <Badge variant="destructive" className="text-[9px]">Conflicts {contradictionCount}</Badge>}
-                      </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {tags.map((t) => <Badge key={`${e.id}-${t}`} variant="outline" className="text-[9px]">{t}</Badge>)}
-                    </div>
-                    <p className="text-xs mt-2 leading-relaxed line-clamp-2">{e.summary}</p>
-                    <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-                      <span>{e.citations.length} cites</span>
-                      <span>{e.id}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className={`border rounded-lg bg-card flex flex-col overflow-hidden ${mobilePane === "events" ? "hidden [@media(min-width:1100px)]:flex" : "flex"} min-h-0`}>
-            <div className="px-4 py-3 border-b flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold">Record Packet Viewer</div>
-                <div className="text-xs text-muted-foreground">
-                  {selectedDocument ? `${selectedDocument.filename}${selectedPage ? ` - page ${selectedPage}` : ""}` : "Select an event with citations to open the source packet"}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant={viewerMode === "source" ? "default" : "outline"} onClick={() => {
-                  setViewerMode("source");
-                  setViewerEnabled(true);
-                  setViewerKey((k) => k + 1);
-                }}>
-                  Source Packet
-                </Button>
-                {latestRun && (
-                  <Button size="sm" variant={viewerMode === "chronology" ? "default" : "outline"} onClick={() => {
-                    setViewerMode("chronology");
-                    setViewerEnabled(true);
-                    setViewerKey((k) => k + 1);
-                  }}>
-                    Chronology PDF
-                  </Button>
-                )}
-                {viewerHref && (
-                  <Button size="sm" onClick={() => setViewerEnabled((v) => !v)}>
-                    {viewerEnabled ? "Pause Preview" : "Load Preview"}
-                  </Button>
-                )}
-                {viewerHref && (
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={viewerHref} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open Source
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="px-4 py-2 border-b text-xs text-muted-foreground flex items-center justify-between">
-              <span>{selectedPage ? `Page ${selectedPage}` : "No page selected"}</span>
-              <span>{selectedDocumentPages ? `${selectedPage || 1}/${selectedDocumentPages}` : "--/--"}</span>
-            </div>
-            <div className="flex-1 bg-muted/60 min-h-[320px]">
-              {viewerHref && viewerEnabled ? (
-                <iframe key={viewerKey} title="Source document viewer" src={viewerHref} className="w-full h-full border-0" />
-              ) : viewerHref ? (
-                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                  <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
-                    <FileText className="h-4 w-4 mr-2" /> Preview paused. Click Load Preview.
-                  </div>
-                </div>
-              ) : (
-                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                  <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
-                    <FileText className="h-4 w-4 mr-2" /> Select an event to jump to source citation.
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activePanel === "vault" && (
-        <div className="mx-6 mt-3 mb-6 border rounded-lg bg-card flex flex-col overflow-hidden min-h-[500px]">
-          <div className="px-4 py-3 border-b flex items-center justify-between">
-            <div className="text-sm font-semibold">Evidence Vault</div>
             <div className="flex items-center gap-2">
+              <Button size="sm" variant={viewerMode === "source" ? "secondary" : "ghost"} className="h-8 text-xs" onClick={() => {
+                setViewerMode("source");
+                setViewerEnabled(true);
+                setViewerKey((k) => k + 1);
+              }}>
+                Source Document
+              </Button>
               {latestRun && (
-                <Button size="sm" variant="outline" onClick={() => {
+                <Button size="sm" variant={viewerMode === "chronology" ? "secondary" : "ghost"} className="h-8 text-xs" onClick={() => {
                   setViewerMode("chronology");
                   setViewerEnabled(true);
                   setViewerKey((k) => k + 1);
                 }}>
-                  Chronology PDF
+                  Generated PDF
                 </Button>
               )}
+              <div className="w-px h-4 bg-border mx-1" />
               {viewerHref && (
-                <Button size="sm" onClick={() => setViewerEnabled((v) => !v)}>
-                  {viewerEnabled ? "Pause Preview" : "Load Preview"}
+                <Button size="sm" variant="outline" className="h-8 text-xs" asChild>
+                  <a href={viewerHref} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+                  </a>
                 </Button>
               )}
             </div>
           </div>
-          <div className="flex-1 bg-muted/60 min-h-[320px]">
+          <div className="flex-1 bg-muted/30 relative rounded-b-xl overflow-hidden p-2">
             {viewerHref && viewerEnabled ? (
-              <iframe key={viewerKey} title="Evidence vault viewer" src={viewerHref} className="w-full h-full border-0" />
+              <iframe key={viewerKey} title="Document viewer" src={viewerHref} className="w-full h-full border rounded-lg bg-white shadow-sm" />
             ) : (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                <div className="w-[92%] h-[88%] rounded-md border border-dashed border-border/70 bg-background/70 flex items-center justify-center">
-                  <FileText className="h-4 w-4 mr-2" /> Preview paused. Click Load Preview.
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+                  <span>Select an event to view its source in the document.</span>
                 </div>
               </div>
             )}
           </div>
         </div>
-      )}
-
-      {selectedEvent && (
-        <div className={`mx-6 mb-6 border rounded-lg bg-card overflow-hidden ${dockCollapsed ? "h-12" : "h-[300px]"}`}>
-          <div className="h-12 px-4 border-b flex items-center justify-between">
-            <div className="text-sm font-semibold flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-amber-600" />
-              Context Dock
-            </div>
-            <Button size="sm" variant="ghost" onClick={() => setDockCollapsed((v) => !v)}>
-              {dockCollapsed ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
-            </Button>
-          </div>
-          {!dockCollapsed && (
-            <Tabs defaultValue="claim" className="h-[calc(100%-48px)]">
-              <TabsList className="mx-4 mt-2 grid grid-cols-5">
-                <TabsTrigger value="claim">Claim ({commandCenter.claimRows.length})</TabsTrigger>
-                <TabsTrigger value="causation">Causation ({commandCenter.causationChains.length})</TabsTrigger>
-                <TabsTrigger value="contradictions">Contradictions ({commandCenter.contradictionMatrix.length})</TabsTrigger>
-                <TabsTrigger value="defense">Defense ({commandCenter.defenseAttackPaths.length})</TabsTrigger>
-                <TabsTrigger value="collapse">Collapse ({commandCenter.collapseCandidates.length})</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="claim" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
-                {commandCenter.claimRows.length === 0 && <div className="text-muted-foreground">No claim candidates yet.</div>}
-                {commandCenter.claimRows.slice(0, 12).map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  return (
-                    <div key={`dock-claim-${idx}`} className="border rounded-md p-2 flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-medium">{textFrom(row, ["claim_type"], "Claim")}</div>
-                        <div className="text-muted-foreground">{textFrom(row, ["assertion", "summary"], "No details.")}</div>
-                      </div>
-                      {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
-                    </div>
-                  );
-                })}
-              </TabsContent>
-
-              <TabsContent value="causation" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
-                {commandCenter.causationChains.length === 0 && <div className="text-muted-foreground">No causation signals for this selection.</div>}
-                {commandCenter.causationChains.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  const score = typeof row.chain_integrity_score === "number" ? row.chain_integrity_score : null;
-                  return (
-                    <div key={`dock-causation-${idx}`} className="border rounded-md p-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{textFrom(row, ["body_region"], "General").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
-                        <div className="flex items-center gap-1">
-                          {score !== null && <Badge variant="outline">Integrity {score}/100</Badge>}
-                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground mt-1">{causationSummary(row)}</div>
-                    </div>
-                  );
-                })}
-              </TabsContent>
-
-              <TabsContent value="contradictions" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
-                {commandCenter.contradictionMatrix.length === 0 && <div className="text-muted-foreground">No contradictions detected.</div>}
-                {commandCenter.contradictionMatrix.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  const delta = typeof row.strength_delta === "number" ? row.strength_delta : null;
-                  return (
-                    <div key={`dock-contradiction-${idx}`} className="border rounded-md p-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{textFrom(row, ["category", "contradiction_type"], "Contradiction").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
-                        <div className="flex items-center gap-1">
-                          {delta !== null && <Badge variant="outline">Δ {delta}</Badge>}
-                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground mt-1">{contradictionSummary(row)}</div>
-                    </div>
-                  );
-                })}
-              </TabsContent>
-
-              <TabsContent value="defense" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
-                {(commandCenter.defenseAttackPaths.length + commandCenter.objectionProfiles.length) === 0 && <div className="text-muted-foreground">No defense signals available.</div>}
-                {commandCenter.defenseAttackPaths.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  return (
-                    <div key={`dock-defense-${idx}`} className="border rounded-md p-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{textFrom(row, ["attack", "attack_vector", "title"], "Defense Path")}</div>
-                        <div className="flex items-center gap-1">
-                          {typeof row.confidence_tier === "string" && <Badge variant="outline">{row.confidence_tier}</Badge>}
-                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground mt-1">{textFrom(row, ["path", "description", "summary"], "No details.")}</div>
-                    </div>
-                  );
-                })}
-              </TabsContent>
-
-              <TabsContent value="collapse" className="h-[calc(100%-48px)] p-3 overflow-y-auto text-xs space-y-2">
-                {commandCenter.collapseCandidates.length === 0 && <div className="text-muted-foreground">No collapse candidates.</div>}
-                {commandCenter.collapseCandidates.map((row, idx) => {
-                  const citationIds = collectCitationIds(row);
-                  const score = typeof row.fragility_score === "number" ? row.fragility_score : null;
-                  return (
-                    <div key={`dock-collapse-${idx}`} className="border rounded-md p-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{textFrom(row, ["fragility_type", "title"], "Fragility").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</div>
-                        <div className="flex items-center gap-1">
-                          {score !== null && <Badge variant="outline">Score {score}</Badge>}
-                          {citationIds[0] && <Button size="sm" variant="outline" onClick={() => focusCitation(citationIds[0])}>Source</Button>}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground mt-1">{textFrom(row, ["why", "argument", "summary"], "No details.")}</div>
-                    </div>
-                  );
-                })}
-              </TabsContent>
-            </Tabs>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
