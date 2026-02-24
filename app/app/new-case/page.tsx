@@ -46,17 +46,20 @@ export default function NewCasePage() {
     setIsProcessing(true);
 
     try {
-      // Always fetch the latest firm from the database
-      // Don't trust session.user.firmId as it may be stale
-      const firmsRes = await fetch("/api/citeline/firms");
-      if (!firmsRes.ok) {
-        throw new Error("Failed to fetch firms");
+      // Use firmId from session if available, otherwise fetch from API
+      let firmId = session?.user?.firmId;
+
+      if (!firmId) {
+        const firmsRes = await fetch("/api/citeline/firms");
+        if (!firmsRes.ok) {
+          throw new Error("Failed to fetch firms");
+        }
+        const firms = await firmsRes.json();
+        if (!firms || firms.length === 0) {
+          throw new Error("No firms found. Please contact support.");
+        }
+        firmId = firms[0].id;
       }
-      const firms = await firmsRes.json();
-      if (!firms || firms.length === 0) {
-        throw new Error("No firms found. Please contact support.");
-      }
-      const firmId = firms[0].id;
 
       const matterRes = await fetch(`/api/citeline/firms/${firmId}/matters`, {
         method: "POST",
@@ -102,7 +105,7 @@ export default function NewCasePage() {
 
       setIsDone(true);
       toast.success("Case created and file uploaded!");
-      
+
       // Auto-redirect into command center (Audit Mode)
       setTimeout(() => {
         router.push(`/app/cases/${matterId}/review`);
@@ -128,7 +131,7 @@ export default function NewCasePage() {
           <CheckCircle2 className="h-10 w-10" />
         </div>
         <h2 className="text-3xl font-bold mb-4">Upload Complete</h2>
-          <p className="text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-8">
           &ldquo;{caseName}&rdquo; has been created and your records are uploaded.
           <br />Redirecting you to Audit Mode...
         </p>

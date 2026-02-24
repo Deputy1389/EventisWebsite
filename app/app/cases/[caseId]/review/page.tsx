@@ -377,8 +377,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     return events.filter((e) => (`${e.dateLabel} ${e.eventType} ${e.summary}`).toLowerCase().includes(q));
   }, [events, query]);
 
-  const fetchCaseData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchCaseData = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
     setError(null);
     try {
       const [matterRes, runsRes, docsRes] = await Promise.all([
@@ -402,7 +402,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load Audit Mode.");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [caseId]);
 
@@ -575,8 +575,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         const errorText = await res.text();
         throw new Error(parseApiError(errorText) || "Failed to start new run");
       }
-      setError("Reprocessing started. This page will update automatically once extraction completes.");
-      await fetchCaseData();
+      setError(null);
+      await fetchCaseData(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start reprocessing.");
     } finally {
@@ -597,7 +597,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     const hasActiveRuns = runs.some((r) => r.status === "pending" || r.status === "running");
     if (!hasActiveRuns) return;
     const timer = setInterval(() => {
-      void fetchCaseData();
+      void fetchCaseData(true);
     }, 5000);
     return () => clearInterval(timer);
   }, [runs, fetchCaseData]);
@@ -681,9 +681,61 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   if (isLoading) {
     return (
-      <div className="h-[60vh] flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" />
-        Loading Audit Mode...
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Initializing Audit Mode...</p>
+      </div>
+    );
+  }
+
+  const hasActiveRuns = runs.some((r) => r.status === "pending" || r.status === "running");
+
+  // If no events found yet, but a run is active, show the "Processing" stable screen
+  if (events.length === 0 && hasActiveRuns) {
+    return (
+      <div className="h-screen flex flex-col bg-background">
+        <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href={`/app/cases/${caseId}`}>
+                <ChevronLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <Scale className="h-4 w-4 text-primary" />
+              <h1 className="text-sm font-semibold truncate">Audit Mode: {matterTitle}</h1>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center max-w-md mx-auto">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+            <Loader2 className="h-16 w-16 animate-spin text-primary relative z-10" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Analyzing Medical Records</h2>
+          <p className="text-muted-foreground mb-8">
+            Our clinical models are currently extracting events, establishing causation chains, and verifying citations.
+            This usually takes 5-10 minutes.
+          </p>
+          <div className="w-full space-y-4 text-left bg-muted/30 p-4 rounded-xl border border-border">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-2 w-2 bg-green-500 rounded-full" />
+              <span>Initializing workspace...</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+              <span>Extracted clinical events...</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="h-2 w-2 bg-muted-foreground/30 rounded-full" />
+              <span className="text-muted-foreground">Generating strategic moat...</span>
+            </div>
+          </div>
+          <p className="mt-8 text-xs text-muted-foreground">
+            This page will automatically refresh as soon as results are ready.
+          </p>
+        </div>
       </div>
     );
   }
@@ -713,7 +765,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={latestRun ? "default" : "outline"} className="text-[10px] uppercase tracking-wide">
-            {latestRun ? "Verification Ready" : "Waiting For Run"}
+            {hasActiveRuns ? "Processing" : latestRun ? "Verification Ready" : "Waiting For Run"}
           </Badge>
           {latestRun && (
             <Button size="sm" asChild>
@@ -725,20 +777,22 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
       </div>
 
-      {error && (
+      {error && !hasActiveRuns && (
         <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           <div className="flex items-center justify-between gap-3">
             <span>{error}</span>
-            <Button size="sm" variant="outline" onClick={() => void triggerReprocess()} disabled={isReprocessing}>
-              {isReprocessing ? (
-                <>
-                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                "Re-run with latest exporter"
-              )}
-            </Button>
+            {!hasActiveRuns && (
+              <Button size="sm" variant="outline" onClick={() => void triggerReprocess()} disabled={isReprocessing}>
+                {isReprocessing ? (
+                  <>
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  "Re-run with latest exporter"
+                )}
+              </Button>
+            )}
           </div>
         </div>
       )}

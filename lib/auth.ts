@@ -12,7 +12,7 @@ const DEMO_USERS = [
         email: "demo@ontarus.ai",
         name: "John Doe",
         passwordHash: "$2b$10$3CuQgIJ6s3aX0Sd66CBgaempmxD3J5aDI8ZDx7YzGWrgEAIEMLo6i",
-        firmId: "38ad220207cd4d37ad382bd55aacadbf",
+        firmId: "85624cc2e5c243c796188177633ac023",
         firm: "Doe & Associates",
     },
 ];
@@ -50,7 +50,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 }
 
                 const isValid = await compare(password, user.passwordHash) || password === "eventis123";
-                
+
                 if (!isValid) {
                     console.log("Invalid password for demo user (checked both hash and plain text)");
                     return null;
