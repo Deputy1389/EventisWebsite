@@ -3,19 +3,21 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ChevronsDown,
+  ChevronsUp,
   ChevronLeft,
   ExternalLink,
   FileText,
   Loader2,
   Scale,
   Search,
-  Sparkles,
   ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseApiError } from "@/lib/api-error";
 
 type Run = {
@@ -202,7 +204,12 @@ function textFrom(row: Record<string, unknown>, keys: string[], fallback = "N/A"
   return fallback;
 }
 
-
+function causationSummary(row: Record<string, unknown>): string {
+  // Try legacy keys first
+  for (const k of ["causation_thesis", "summary", "narrative"]) {
+    const v = row[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
   // Build from actual pipeline data shape
   const rungs = Array.isArray(row.rungs) ? row.rungs : [];
   const missing = Array.isArray(row.missing_rungs) ? row.missing_rungs : [];
@@ -264,7 +271,18 @@ function countMoatSignals(ext: Record<string, unknown>): number {
   return total;
 }
 
+function deriveImpact(score: number): "Low" | "Med" | "High" {
+  if (score >= 70) return "High";
+  if (score >= 40) return "Med";
+  return "Low";
+}
 
+function deriveSeverity(eventType: string, summary: string): "Low" | "Med" | "High" {
+  const blob = `${eventType} ${summary}`.toLowerCase();
+  if (/(surgery|procedure|hospital|admission|discharge|er|emergency|fracture|herniation)/.test(blob)) return "High";
+  if (/(imaging|mri|ct|xray|injection|epidural|radiculopathy|severe)/.test(blob)) return "Med";
+  return "Low";
+}
 
 function deriveTags(eventType: string, summary: string): string[] {
   const blob = `${eventType} ${summary}`.toLowerCase();
@@ -309,10 +327,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [viewerEnabled, setViewerEnabled] = useState(false);
   const [viewerMode, setViewerMode] = useState<"source" | "chronology">("source");
   const [viewerKey, setViewerKey] = useState(0);
-  
-  
+  const [mobilePane, setMobilePane] = useState<"events" | "viewer">("events");
+  const [dockCollapsed, setDockCollapsed] = useState(false);
   const [docPageCounts, setDocPageCounts] = useState<Record<string, number>>({});
-  
+  const [activePanel, setActivePanel] = useState<"strategic" | "summary" | "chronology" | "vault">("strategic");
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
@@ -347,7 +365,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const selectedDocument = selectedCitation ? documentMap.get(selectedCitation.source_document_id) || null : null;
   const selectedPage = selectedCitation?.page_number || null;
-  
+  const selectedDocumentPages = selectedDocument ? docPageCounts[selectedDocument.id] || null : null;
   const viewerHref = viewerMode === "chronology" && latestRun
     ? `/api/citeline/runs/${latestRun.id}/artifacts/pdf`
     : selectedDocument
@@ -612,7 +630,19 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     setViewerKey((k) => k + 1);
   }, [selectedEvent, selectedCitationId]);
 
-  
+  const focusCitation = useCallback((citationId: string) => {
+    for (const event of events) {
+      const found = event.citations.find((c) => c.citation_id === citationId);
+      if (!found) continue;
+      setSelectedEventId(event.id);
+      setSelectedCitationId(citationId);
+      setViewerEnabled(true);
+      setViewerMode("source");
+      setViewerKey((k) => k + 1);
+      setMobilePane("viewer");
+      return;
+    }
+  }, [events]);
 
   const contradictionCountByEvent = useMemo(() => {
     const map = new Map<string, number>();
@@ -641,13 +671,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const anchoredEvents = events.filter((e) => e.citations.length > 0).length;
   const citationCoverage = events.length ? Math.round((anchoredEvents / events.length) * 100) : 0;
   const auditScoreRaw = latestRun?.metrics?.audit_score;
-  
+  const auditScore = typeof auditScoreRaw === "number" ? String(Math.round(auditScoreRaw)) : "N/A";
   const qualityGate = commandCenter.qualityGate || {};
   const filteredCount = Number(qualityGate.num_snippets_filtered || 0);
-  
-  
-  
-  
+  const cleanedCount = Number(qualityGate.num_snippets_cleaned || 0);
+  const noiseRisk = filteredCount > 10 ? "High" : filteredCount > 3 ? "Med" : "Low";
+  const evidenceCoverageLabel = citationCoverage >= 70 ? "Strong" : citationCoverage >= 40 ? "Moderate" : "Weak";
+  const defenseRisk = commandCenter.defenseAttackPaths.length > 0 || commandCenter.contradictionMatrix.length > 0 ? "Med" : "Low";
   const chronologyIntegrity = Math.min(100, Math.round((anchoredEvents / Math.max(1, events.length)) * 100));
 
   if (isLoading) {
@@ -664,56 +694,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   // If no events found yet, but a run is active, show the "Processing" stable screen
   if (events.length === 0 && hasActiveRuns) {
     return (
-      <div className="h-screen flex flex-col bg-background">
-        <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href={`/app/cases/${caseId}`}>
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-2">
-              <Scale className="h-4 w-4 text-primary" />
-              <h1 className="text-sm font-semibold truncate">Audit Mode: {matterTitle}</h1>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-center max-w-md mx-auto">
-          <div className="relative mb-6">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-            <Loader2 className="h-16 w-16 animate-spin text-primary relative z-10" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Analyzing Medical Records</h2>
-          <p className="text-muted-foreground mb-8">
-            Our clinical models are currently extracting events, establishing causation chains, and verifying citations.
-            This usually takes 5-10 minutes.
-          </p>
-          <div className="w-full space-y-4 text-left bg-muted/30 p-4 rounded-xl border border-border">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="h-2 w-2 bg-green-500 rounded-full" />
-              <span>Initializing workspace...</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-              <span>Extracted clinical events...</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="h-2 w-2 bg-muted-foreground/30 rounded-full" />
-              <span className="text-muted-foreground">Generating strategic moat...</span>
-            </div>
-          </div>
-          <p className="mt-8 text-xs text-muted-foreground">
-            This page will automatically refresh as soon as results are ready.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
     <div className="h-screen -m-8 flex flex-col bg-background text-foreground overflow-hidden">
-      {/* Header */}
       <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
@@ -746,43 +727,24 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
       </div>
 
-      {error && !hasActiveRuns && (
-        <div className="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <span>{error}</span>
-            <Button size="sm" variant="outline" onClick={() => void triggerReprocess()} disabled={isReprocessing}>
-              {isReprocessing ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
-              {isReprocessing ? "Starting..." : "Re-run"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Three-Pane Content */}
       <div className="flex-1 overflow-hidden flex divide-x">
-        {/* Pane 1: Timeline (Master) */}
         <div className="w-[320px] xl:w-[380px] flex flex-col bg-card shrink-0">
-          <div className="p-3 border-b bg-muted/5 flex items-center justify-between">
-            <div className="flex flex-col gap-2 w-full">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Timeline</span>
-                <Button 
-                  size="sm" 
-                  variant={viewerMode === "chronology" ? "default" : "outline"} 
-                  className="h-7 text-[10px] px-2"
-                  onClick={() => {
-                    setViewerMode("chronology");
-                    setViewerEnabled(true);
-                    setViewerKey(k => k + 1);
-                  }}
-                >
-                  <FileText className="h-3 w-3 mr-1" /> View Full Chronology PDF
-                </Button>
-              </div>
+          <div className="p-3 border-b bg-muted/5 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Timeline</span>
+              <Button 
+                size="sm" 
+                variant={viewerMode === "chronology" ? "default" : "outline"} 
+                className="h-7 text-[10px] px-2"
+                onClick={() => {
+                  setViewerMode("chronology");
+                  setViewerEnabled(true);
+                  setViewerKey(k => k + 1);
+                }}
+              >
+                <FileText className="h-3 w-3 mr-1" /> Full PDF
+              </Button>
             </div>
-            <span className="text-[10px] text-muted-foreground font-medium">{filteredEvents.length} Events</span>
-          </div>
-          <div className="p-3 border-b shrink-0">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
               <input
@@ -795,9 +757,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
             {isGraphLoading ? (
-              <div className="text-xs text-muted-foreground text-center p-8">
-                <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" /> Loading...
-              </div>
+              <div className="text-xs text-muted-foreground text-center p-8">Loading Timeline...</div>
             ) : filteredEvents.map((e) => {
               const active = selectedEvent?.id === e.id;
               const isHot = /(mri|ct|xray|imaging|surgery|procedure|fracture|herniation|surgical|hospital)/i.test(e.summary + e.eventType);
@@ -811,7 +771,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                     setSelectedEventId(e.id);
                     setViewerEnabled(true);
                   }}
-                  className={`w-full text-left border rounded-lg p-3 transition-all ${active ? "border-primary bg-primary/[0.04] ring-1 ring-primary/20 shadow-sm" : isHot ? "border-amber-200 bg-amber-50/40 hover:border-amber-300 shadow-sm" : "hover:border-primary/40 bg-background"}`}
+                  className={`w-full text-left border rounded-lg p-3 transition-all ${active ? "border-primary bg-primary/[0.04] ring-1 ring-primary/20 shadow-sm" : isHot ? "border-amber-200 bg-amber-50/40 hover:border-amber-300" : "hover:border-primary/40 bg-background"}`}
                 >
                   {isHot && !active && <div className="flex items-center gap-1 text-[9px] font-bold text-amber-600 uppercase mb-2"><Sparkles className="h-3 w-3" /> Critical Evidence</div>}
                   <div className="flex items-center justify-between mb-1.5">
@@ -829,145 +789,84 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           </div>
         </div>
 
-        {/* Pane 2: Context Dock (Detail) */}
         <div className="w-[300px] xl:w-[350px] flex flex-col bg-muted/5 shrink-0">
           <div className="p-3 border-b flex items-center gap-2">
             <ShieldAlert className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs font-bold uppercase tracking-wider">Strategic Context</span>
           </div>
-          
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {!selectedEvent ? (
               <div className="space-y-6">
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
                    <div className="flex items-center gap-2 mb-2">
                      <Sparkles className="h-4 w-4 text-primary" />
-                     <span className="text-xs font-bold uppercase tracking-wider text-primary">Strategic Executive Brief</span>
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Strategic Brief</span>
                    </div>
                    <p className="text-[11px] text-muted-foreground leading-relaxed">
                      Automated screening of {packetPages} pages detected {countMoatSignals(commandCenter as unknown as Record<string, unknown>)} litigation signals. 
-                     Select an event to verify source evidence.
                    </p>
                 </div>
-
                 {commandCenter.contradictionMatrix.length > 0 && (
                   <div className="space-y-3">
-                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-1">
-                      <ShieldAlert className="h-3 w-3" /> Top Defense Risks (Smoking Guns)
-                    </div>
+                    <div className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-1"><ShieldAlert className="h-3 w-3" /> Risks</div>
                     {commandCenter.contradictionMatrix.slice(0, 2).map((row, idx) => (
-                      <div key={`brief-contra-${idx}`} className="p-3 rounded-lg border-l-4 border-l-red-500 border bg-background shadow-sm text-xs">
-                        <div className="font-bold text-foreground mb-1">{textFrom(row, ["category", "contradiction_type"], "Contradiction")}</div>
+                      <div key={`br-c-${idx}`} className="p-3 rounded-lg border-l-4 border-l-red-500 border bg-background text-xs">
+                        <div className="font-bold mb-1">{textFrom(row, ["category"], "Contradiction")}</div>
                         <p className="text-muted-foreground line-clamp-2">{contradictionSummary(row)}</p>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {commandCenter.claimRows.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="text-[10px] font-bold text-green-700 uppercase tracking-widest flex items-center gap-1">
-                      <Scale className="h-3 w-3" /> Key Damages / Claims
-                    </div>
-                    {commandCenter.claimRows.slice(0, 2).map((row, idx) => (
-                      <div key={`brief-claim-${idx}`} className="p-3 rounded-lg border-l-4 border-l-green-500 border bg-background shadow-sm text-xs">
-                        <div className="font-bold text-foreground mb-1">{textFrom(row, ["claim_type"], "Claim")}</div>
-                        <p className="text-muted-foreground line-clamp-2">{textFrom(row, ["assertion", "summary"], "")}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
                 <div className="pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    className="w-full text-xs h-9 justify-between"
-                    onClick={() => {
-                      setViewerMode("chronology");
-                      setViewerEnabled(true);
-                      setViewerKey(k => k + 1);
-                    }}
-                  >
-                    View Full Chronology PDF <FileText className="h-3.5 w-3.5 ml-2" />
+                  <Button variant="outline" className="w-full text-xs h-9 justify-between" onClick={() => { setViewerMode("chronology"); setViewerEnabled(true); setViewerKey(k => k + 1); }}>
+                    View Chronology PDF <FileText className="h-3.5 w-3.5 ml-2" />
                   </Button>
                 </div>
               </div>
             ) : (
-              <>
-                {/* Related Moat Signals for Selected Event */}
-                <div className="space-y-4">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b pb-1">Signals & Risks</div>
-                  
-                  {/* Filtered Moat components based on selected citation */}
-                  {[...commandCenter.contradictionMatrix, ...commandCenter.claimRows, ...commandCenter.defenseAttackPaths].filter(row => {
-                    const cites = collectCitationIds(row);
-                    const eventCites = new Set(selectedEvent.citations.map(c => c.citation_id));
-                    return cites.some(c => eventCites.has(c));
-                  }).length === 0 ? (
-                    <div className="text-[11px] text-muted-foreground italic">No direct strategic flags for this event.</div>
-                  ) : (
-                    [...commandCenter.contradictionMatrix, ...commandCenter.claimRows, ...commandCenter.defenseAttackPaths].filter(row => {
-                      const cites = collectCitationIds(row);
-                      const eventCites = new Set(selectedEvent.citations.map(c => c.citation_id));
-                      return cites.some(c => eventCites.has(c));
-                    }).map((row, idx) => (
-                      <div key={`sel-moat-${idx}`} className="p-3 rounded-lg border bg-background shadow-sm text-xs space-y-2">
-                         <div className="flex items-center justify-between">
-                            <span className="font-bold text-primary">{textFrom(row, ["claim_type", "category", "attack"], "Signal")}</span>
-                            <Badge variant="outline" className="text-[8px]">Linked</Badge>
-                         </div>
-                         <p className="text-muted-foreground leading-snug">{textFrom(row, ["assertion", "summary", "description", "why"], "No details.")}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Event Metadata */}
+              <div className="space-y-4">
+                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b pb-1">Signals & Risks</div>
+                {[...commandCenter.contradictionMatrix, ...commandCenter.claimRows, ...commandCenter.defenseAttackPaths].filter(row => {
+                  const cites = collectCitationIds(row);
+                  const eventCites = new Set(selectedEvent.citations.map(c => c.citation_id));
+                  return cites.some(c => eventCites.has(c));
+                }).map((row, idx) => (
+                  <div key={`sel-m-${idx}`} className="p-3 rounded-lg border bg-background shadow-sm text-xs space-y-2">
+                    <div className="font-bold text-primary">{textFrom(row, ["claim_type", "category", "attack"], "Signal")}</div>
+                    <p className="text-muted-foreground leading-snug">{textFrom(row, ["assertion", "summary", "description", "why"], "")}</p>
+                  </div>
+                ))}
                 <div className="space-y-3 pt-4 border-t">
                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Evidence</div>
-                  <div className="grid gap-2">
-                    {selectedEvent.citations.map((c, idx) => (
-                      <button 
-                        key={`cite-${idx}`} 
-                        onClick={() => setSelectedCitationId(c.citation_id)}
-                        className={`text-left p-2 rounded border text-[10px] transition-colors ${selectedCitationId === c.citation_id ? "border-primary bg-primary/5" : "hover:bg-background"}`}
-                      >
-                        <div className="font-medium truncate">Page {c.page_number}</div>
-                        <div className="text-muted-foreground truncate">{c.snippet || "View source excerpt..."}</div>
-                      </button>
-                    ))}
-                  </div>
+                  {selectedEvent.citations.map((c, idx) => (
+                    <button key={`c-${idx}`} onClick={() => setSelectedCitationId(c.citation_id)} className={`text-left p-2 rounded border text-[10px] w-full ${selectedCitationId === c.citation_id ? "border-primary bg-primary/5" : "bg-background"}`}>
+                      <div>Page {c.page_number}</div>
+                      <div className="text-muted-foreground truncate">{c.snippet || "View source..."}</div>
+                    </button>
+                  ))}
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Pane 3: Document Viewer */}
         <div className="flex-1 flex flex-col bg-card min-w-0">
-          <div className="h-12 px-4 border-b flex items-center justify-between bg-background shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="text-xs font-medium text-muted-foreground">
-                {selectedDocument ? `${selectedDocument.filename} - Page ${selectedPage}` : "Document Viewer"}
-              </div>
-              <div className="flex items-center gap-1">
-                <Button size="sm" variant={viewerMode === "source" ? "secondary" : "ghost"} className="h-7 text-[10px]" onClick={() => setViewerMode("source")}>Source</Button>
-                <Button size="sm" variant={viewerMode === "chronology" ? "secondary" : "ghost"} className="h-7 text-[10px]" onClick={() => setViewerMode("chronology")}>PDF</Button>
-              </div>
+          <div className="h-12 px-4 border-b flex items-center justify-between shrink-0">
+            <div className="text-xs font-medium text-muted-foreground truncate">
+              {selectedDocument ? `${selectedDocument.filename} - Page ${selectedPage}` : "Viewer"}
             </div>
-            {viewerHref && (
-              <Button size="sm" variant="outline" className="h-7 text-[10px]" asChild>
-                <a href={viewerHref} target="_blank" rel="noreferrer"><ExternalLink className="h-3 w-3 mr-1" /> Popout</a>
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant={viewerMode === "source" ? "secondary" : "ghost"} className="h-7 text-[10px]" onClick={() => setViewerMode("source")}>Source</Button>
+              <Button size="sm" variant={viewerMode === "chronology" ? "secondary" : "ghost"} className="h-7 text-[10px]" onClick={() => setViewerMode("chronology")}>PDF</Button>
+            </div>
           </div>
-          <div className="flex-1 bg-muted/20 relative p-1">
+          <div className="flex-1 bg-muted/20 p-1">
             {viewerHref && viewerEnabled ? (
               <iframe key={viewerKey} title="Document viewer" src={viewerHref} className="w-full h-full border rounded-md bg-white shadow-lg" />
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                 <FileText className="h-8 w-8 mb-2 opacity-20" />
-                <span className="text-xs">Click an event to load evidence.</span>
+                <span className="text-xs">Select an event to load evidence.</span>
               </div>
             )}
           </div>
