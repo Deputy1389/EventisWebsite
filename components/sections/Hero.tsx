@@ -19,8 +19,8 @@ export function Hero() {
         <div className="mt-6 grid items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="float-in">
             <h1 className="text-balance text-4xl leading-tight md:text-6xl">
-              The Command Center for
-              <span className="text-gradient"> Medical Record Litigation</span>
+              The Intelligent Frontier for
+              <span className="text-gradient"> Medical Litigation</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
               Linecite combines clinical ontologies with a semantic reasoning layer to detect defense-side contradictions, uncover hidden claims, and generate court-ready intelligence.
@@ -43,15 +43,15 @@ export function Hero() {
           <div className="float-in legal-glass rounded-3xl p-6 shadow-xl shadow-primary/10">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Outcomes Firms Care About</p>
             <div className="mt-5 grid gap-4">
-              <div className="rounded-xl border bg-background/70 p-4">
+              <div className="rounded-xl border bg-white shadow-sm p-5 border-slate-100">
                 <p className="text-2xl font-semibold">Uncover Defense Exposure</p>
                 <p className="text-sm text-muted-foreground">Semantic reasoning finds prior injuries and denials hidden in thousands of pages</p>
               </div>
-              <div className="rounded-xl border bg-background/70 p-4">
+              <div className="rounded-xl border bg-white shadow-sm p-5 border-slate-100">
                 <p className="text-2xl font-semibold">Clinical Causation Chains</p>
                 <p className="text-sm text-muted-foreground">Automatically link incident mechanics to specific diagnoses and ICD-10 codes</p>
               </div>
-              <div className="rounded-xl border bg-background/70 p-4">
+              <div className="rounded-xl border bg-white shadow-sm p-5 border-slate-100">
                 <p className="text-2xl font-semibold">The &quot;Smoking Gun&quot; Radar</p>
                 <p className="text-sm text-muted-foreground">Surface the top 1% of high-impact risks that win or lose cases in seconds</p>
               </div>
