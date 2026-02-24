@@ -23,7 +23,7 @@ export function Hero() {
               <span className="text-gradient"> Medical Record Litigation</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              Linecite transforms raw PDFs into court-ready chronology intelligence with evidence-linked citations, contradiction
+              Linecite combines clinical ontologies with a semantic reasoning layer to detect defense-side contradictions, uncover hidden claims, and generate court-ready intelligence.
               detection, and audit-first verification workflows.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -44,16 +44,16 @@ export function Hero() {
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Outcomes Firms Care About</p>
             <div className="mt-5 grid gap-4">
               <div className="rounded-xl border bg-background/70 p-4">
-                <p className="text-2xl font-semibold">6-12 hrs saved</p>
-                <p className="text-sm text-muted-foreground">Per matter during initial chronology drafting</p>
+                <p className="text-2xl font-semibold">Uncover Defense Exposure</p>
+                <p className="text-sm text-muted-foreground">Semantic reasoning finds prior injuries and denials hidden in thousands of pages</p>
               </div>
               <div className="rounded-xl border bg-background/70 p-4">
-                <p className="text-2xl font-semibold">Page-level traceability</p>
-                <p className="text-sm text-muted-foreground">Every critical assertion anchored to source packet evidence</p>
+                <p className="text-2xl font-semibold">Clinical Causation Chains</p>
+                <p className="text-sm text-muted-foreground">Automatically link incident mechanics to specific diagnoses and ICD-10 codes</p>
               </div>
               <div className="rounded-xl border bg-background/70 p-4">
-                <p className="text-2xl font-semibold">Audit Mode verification</p>
-                <p className="text-sm text-muted-foreground">Event list and original records side-by-side for immediate review</p>
+                <p className="text-2xl font-semibold">The &quot;Smoking Gun&quot; Radar</p>
+                <p className="text-sm text-muted-foreground">Surface the top 1% of high-impact risks that win or lose cases in seconds</p>
               </div>
             </div>
           </div>

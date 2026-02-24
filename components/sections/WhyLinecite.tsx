@@ -2,13 +2,13 @@ import { Link2, Search, ShieldCheck } from "lucide-react";
 
 const pillars = [
   {
-    title: "Citation Fidelity",
-    desc: "Every major claim is traceable to packet evidence, reducing review uncertainty and demand-letter risk.",
+    title: "Semantic Reasoning",
+    desc: "Our reasoning layer detects nuance. We find the 'hidden' prior injuries and contradicting statements that standard OCR tools miss.",
     icon: Link2,
   },
   {
-    title: "Deterministic Core",
-    desc: "Structure-first extraction avoids loose narrative drift and keeps outputs anchored in what the records actually show.",
+    title: "Litigation-Grade Logic",
+    desc: "We combine clinical ontologies with LLM reasoning to ensure 100% accuracy and zero narrative drift in high-stakes cases.",
     icon: Search,
   },
   {

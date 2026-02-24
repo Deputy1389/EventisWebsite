@@ -7,12 +7,12 @@ const steps = [
   {
     step: "02",
     title: "Run Extraction",
-    desc: "The engine identifies events, providers, citations, and litigation signals, then composes command-center artifacts.",
+    desc: "Our reasoning engine extracts events and cross-references them against prior records to find contradictions and causation signals.",
   },
   {
     step: "03",
     title: "Verify in Audit Mode",
-    desc: "Click any event, contradiction, or claim and jump directly into the original source page to validate instantly.",
+    desc: "Verify our findings in the 3-Pane Audit Mode. Every clinical claim is linked to the exact page and paragraph in the source PDF.",
   },
   {
     step: "04",
