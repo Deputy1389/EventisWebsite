@@ -691,9 +691,57 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const hasActiveRuns = runs.some((r) => r.status === "pending" || r.status === "running");
 
-  // If no events found yet, but a run is active, show the "Processing" stable screen
-  if (events.length === 0 && hasActiveRuns) {
-    return (
+      // If no events found yet, but a run is active, show the "Processing" stable screen
+    if (events.length === 0 && hasActiveRuns) {
+      return (
+        <div className="h-screen flex flex-col bg-background">
+          <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href={`/app/cases/${caseId}`}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <Scale className="h-4 w-4 text-primary" />
+                <h1 className="text-sm font-semibold truncate">Audit Mode: {matterTitle}</h1>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center max-w-md mx-auto">
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+              <Loader2 className="h-16 w-16 animate-spin text-primary relative z-10" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Analyzing Medical Records</h2>
+            <p className="text-muted-foreground mb-8">
+              Our clinical models are currently extracting events, establishing causation chains, and verifying citations.
+              This usually takes 5-10 minutes.
+            </p>
+            <div className="w-full space-y-4 text-left bg-muted/30 p-4 rounded-xl border border-border">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="h-2 w-2 bg-green-500 rounded-full" />
+                <span>Initializing workspace...</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                <span>Extracted clinical events...</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="h-2 w-2 bg-muted-foreground/30 rounded-full" />
+                <span className="text-muted-foreground">Generating strategic moat...</span>
+              </div>
+            </div>
+            <p className="mt-8 text-xs text-muted-foreground">
+              This page will automatically refresh as soon as results are ready.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+  return (
     <div className="h-screen -m-8 flex flex-col bg-background text-foreground overflow-hidden">
       <div className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30 shrink-0">
         <div className="flex items-center gap-3">
@@ -874,6 +922,4 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       </div>
     </div>
   );
-}
-
 }
