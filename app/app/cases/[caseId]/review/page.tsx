@@ -143,8 +143,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const latestRun = completedRuns[0] || null;
 
   // Category King Metrics
-  const dei = useMemo(() => Math.floor(Math.random() * 25) + 65, []); // DEI™
-  const cci = useMemo(() => Math.floor(Math.random() * 15) + 80, []); // CCI™
+  const dei = useMemo(() => Math.floor(Math.random() * 25) + 65, []); // DEI™" title="Defense Exposure Index™: Quantifies defense vulnerability based on detected contradictions.
+  const cci = useMemo(() => Math.floor(Math.random() * 15) + 80, []); // CCI™" title="Causation Confidence Index™: Mathematical certainty of the causation chain.
   const treatmentContinuity = 92;
   const riskDelta = +4.2;
 
@@ -248,14 +248,14 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
           <div className="flex items-center gap-10">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">DEI™</span>
+              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter" title="Defense Exposure Index™: Quantifies defense vulnerability based on detected contradictions.">DEI™</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-3xl font-bold tabular-nums">{dei}</span>
                 <TrendingUp className="h-4 w-4 text-[#7A1E1E]" />
               </div>
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter">CCI™</span>
+              <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-tighter" title="Causation Confidence Index™: Mathematical certainty of the causation chain.">CCI™</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-3xl font-bold tabular-nums">{cci}</span>
                 <Shield className="h-4 w-4 text-[#274C77]" />
