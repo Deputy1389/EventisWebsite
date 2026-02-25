@@ -151,6 +151,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [viewerMode, setViewerMode] = useState<"source" | "chronology">("source");
   const [viewerKey, setViewerKey] = useState(0);
   const [activePanel, setActivePanel] = useState<"continuum" | "argument" | "causation">("continuum");
+  const [leftWidth, setLeftWidth] = useState(380);
+  const [rightWidth, setRightWidth] = useState(500);
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
 
   const completedRuns = useMemo(
     () => runs.filter((r) => SUCCESS_STATUSES.has((r.status || "").toLowerCase())),
@@ -249,7 +253,31 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
     }
   }, []);
 
-  useEffect(() => { void fetchCaseData(); }, [fetchCaseData]);
+  
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        setLeftWidth(Math.max(250, Math.min(600, e.clientX)));
+      }
+      if (isResizingRight) {
+        setRightWidth(Math.max(300, Math.min(800, window.innerWidth - e.clientX)));
+      }
+    };
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+      document.body.style.cursor = 'default';
+    };
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingLeft, isResizingRight]);
+useEffect(() => { void fetchCaseData(); }, [fetchCaseData]);
   
   useEffect(() => { 
     if (latestRun && events.length === 0) {
@@ -382,7 +410,14 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
 
         <div className="flex items-center gap-3">
-          <Button className="bg-[#C6A85E] hover:bg-[#B08D4A] text-black font-extrabold h-10 px-6 shadow-lg shadow-[#C6A85E]/10">
+          <Button 
+            onClick={() => {
+              if (latestRun) {
+                window.open(`/api/citeline/runs/${latestRun.id}/artifacts/pdf`, "_blank");
+              }
+            }}
+            className="bg-[#C6A85E] hover:bg-[#B08D4A] text-black font-extrabold h-10 px-6 shadow-lg shadow-[#C6A85E]/10"
+          >
             EXPORT INTELLIGENCE BRIEF™
           </Button>
           <Button variant="outline" size="icon" className="border-[#232A34] text-[#9CA3AF] hover:text-white">
@@ -394,8 +429,9 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
       </header>
 
-      <div className="flex-1 flex divide-x divide-[#232A34] overflow-hidden">
-        <aside className="w-[340px] xl:w-[400px] flex flex-col bg-[#0F1217] shrink-0">
+      <div className="flex-1 flex overflow-hidden">
+        <aside style={{ width: leftWidth }} className="relative flex flex-col bg-[#0F1217] shrink-0 border-r border-[#232A34]">
+          <div onMouseDown={() => { setIsResizingLeft(true); document.body.style.cursor = "col-resize"; }} className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#C6A85E]/50 transition-colors z-50" />
           <div className="p-4 border-b border-[#232A34] flex items-center justify-between bg-[#161B22]/50">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-[#C6A85E]" />
@@ -490,7 +526,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           </div>
         </main>
 
-        <aside className="w-[450px] xl:w-[550px] flex flex-col bg-[#161B22] shrink-0">
+        <aside style={{ width: rightWidth }} className="relative flex flex-col bg-[#161B22] shrink-0 border-l border-[#232A34]">
+          <div onMouseDown={() => { setIsResizingRight(true); document.body.style.cursor = "col-resize"; }} className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#C6A85E]/50 transition-colors z-50" />
           <div className="h-12 border-b border-[#232A34] px-4 flex items-center justify-between bg-[#0F1217]/50">
             <div className="flex items-center gap-2">
               <Layout className="h-4 w-4 text-[#274C77]" />
