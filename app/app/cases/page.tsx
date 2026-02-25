@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-  Activity,
   FileCheck,
   FileText,
   Loader2,
@@ -13,10 +12,8 @@ import {
   Shield,
   TrendingUp,
   ArrowRight,
-  Clock,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -97,7 +94,7 @@ export default function AllCasesPage() {
           <h1 className="text-5xl font-serif text-white mb-4 tracking-tight">Active Docket</h1>
           <p className="text-slate-500 text-lg max-w-2xl">Deterministic medical intelligence grid. Map causation and quantify defense exposure across your entire practice.</p>
         </div>
-        <Button asChild size="lg" className="bg-[#C6A85E] hover:bg-[#B08D4A] text-black font-black h-14 px-10 rounded-xl shadow-2xl shadow-[#C6A85E]/10">
+        <Button asChild size="lg" className="bg-[#C6A85E] hover:bg-[#B08D4A] text-black font-bold h-14 px-10 rounded-xl shadow-2xl shadow-[#C6A85E]/10">
           <Link href="/app/new-case">
             <Plus className="mr-2 h-5 w-5" />
             INITIALIZE MATTER

@@ -3,20 +3,11 @@
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Activity,
-  AlertCircle,
   ChevronLeft,
   FileText,
   Layout,
   Loader2,
-  Lock,
-  RefreshCw,
-  Search,
   Share2,
-  Shield,
-  ShieldAlert,
-  Sparkles,
-  TrendingUp,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +131,6 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedCitationId, setSelectedCitationId] = useState<string | null>(null);
-  const [viewerMode, setViewerMode] = useState<"source" | "chronology">("source");
   const [viewerKey, setViewerKey] = useState(0);
   const [activePanel, setActivePanel] = useState<"continuum" | "argument" | "causation">("continuum");  
   const [leftWidth, setLeftWidth] = useState(420);
@@ -156,8 +146,6 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
   const dei = useMemo(() => Math.floor(Math.random() * 25) + 65, []);
   const cci = useMemo(() => Math.floor(Math.random() * 15) + 80, []);
-  const treatmentContinuity = 92;
-  const riskDelta = +4.2;
 
   const selectedEvent = useMemo(() => {
     return events.find((e) => e.id === selectedEventId) || events[0] || null;
@@ -169,14 +157,11 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   }, [selectedCitationId, selectedEvent]);
 
   const viewerHref = useMemo(() => {
-    if (viewerMode === "chronology" && latestRun) {
-      return `/api/citeline/runs/${latestRun.id}/artifacts/pdf`;
-    }
     if (selectedCitation) {
       return `/api/citeline/documents/${selectedCitation.source_document_id}/download?v=${viewerKey}#page=${selectedCitation.page_number}`;
     }
     return null;
-  }, [viewerMode, latestRun, selectedCitation, viewerKey]);
+  }, [selectedCitation, viewerKey]);
 
   const fetchCaseData = useCallback(async (silent = false) => {
     if (!silent) setIsLoading(true);
@@ -344,8 +329,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             <p className="text-[11px] text-slate-500 font-medium">Real-time medical contradiction mapping</p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {commandCenter.contradictionMatrix.map((item: any, idx) => (
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            {commandCenter.contradictionMatrix.map((item: Record<string, unknown>, idx) => (
               <div key={`v-contra-${idx}`} className="group relative bg-[#161B22] border border-[#232A34] hover:border-[#7A1E1E]/50 p-5 rounded-xl transition-all cursor-pointer shadow-sm">
                 <div className="absolute left-0 top-4 bottom-4 w-1 bg-[#7A1E1E] rounded-r-full" />
                 <div className="flex justify-between items-start mb-3">
@@ -366,7 +351,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-10">
+          <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
             {activePanel === "continuum" ? (
               <div className="max-w-4xl mx-auto">
                 <div className="space-y-12">
