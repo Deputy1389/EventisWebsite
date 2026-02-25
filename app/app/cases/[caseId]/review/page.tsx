@@ -111,7 +111,7 @@ type CausationChain = {
   rungs?: CausationRung[];
   missing_rungs?: string[];
 };
-const SUCCESS_STATUSES = new Set(["success", "partial", "completed"]);
+const SUCCESS_STATUSES = new Set(["success", "partial", "completed", "needs_review"]);
 
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
@@ -121,6 +121,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [matter, setMatter] = useState<Matter | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [loadedRunId, setLoadedRunId] = useState<string | null>(null);
   const [commandCenter, setCommandCenter] = useState<CommandCenterData>({
     claimRows: [],
     causationChains: [],
@@ -144,8 +145,30 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   );
   const latestRun = completedRuns[0] || null;
 
-  const dei = useMemo(() => Math.floor(Math.random() * 25) + 65, []);
-  const cci = useMemo(() => Math.floor(Math.random() * 15) + 80, []);
+  const dei = useMemo(() => {
+    const contradictionCount = commandCenter.contradictionMatrix.length;
+    const collapseCount = commandCenter.collapseCandidates.length;
+    const attackPathCount = commandCenter.defenseAttackPaths.length;
+    const eventCount = events.length || Number(latestRun?.metrics?.events_total || 0);
+    const raw = 35 + contradictionCount * 12 + collapseCount * 8 + attackPathCount * 5 + Math.min(12, Math.floor(eventCount / 10));
+    return Math.max(0, Math.min(99, raw));
+  }, [commandCenter.contradictionMatrix.length, commandCenter.collapseCandidates.length, commandCenter.defenseAttackPaths.length, events.length, latestRun?.metrics?.events_total]);
+
+  const cci = useMemo(() => {
+    const chains = commandCenter.causationChains || [];
+    const chainScores = chains
+      .map((c) => Number(c?.chain_integrity_score))
+      .filter((n) => Number.isFinite(n));
+    const avgChain = chainScores.length
+      ? Math.round(chainScores.reduce((a, b) => a + b, 0) / chainScores.length)
+      : null;
+    const citedEventRatio = events.length
+      ? events.filter((e) => e.citations.length > 0).length / events.length
+      : 0;
+    const fallback = 60 + Math.round(citedEventRatio * 30);
+    const raw = avgChain ?? fallback;
+    return Math.max(0, Math.min(99, raw));
+  }, [commandCenter.causationChains, events]);
 
   const selectedEvent = useMemo(() => {
     return events.find((e) => e.id === selectedEventId) || events[0] || null;
@@ -223,6 +246,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         contradictionMatrix: (ext.contradiction_matrix as Record<string, unknown>[]) || [],
         narrativeDuality: (ext.narrative_duality as NarrativeDuality) || null,
       });
+      setLoadedRunId(runId);
     } finally {
       setIsGraphLoading(false);
     }
@@ -256,10 +280,13 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   useEffect(() => { void fetchCaseData(); }, [fetchCaseData]);
 
   useEffect(() => {
-    if (latestRun && events.length === 0) {
+    if (latestRun && latestRun.id !== loadedRunId) {
+      setEvents([]);
+      setSelectedEventId(null);
+      setSelectedCitationId(null);
       void fetchEvidenceGraph(latestRun.id);
     }
-  }, [latestRun, fetchEvidenceGraph, events.length]);
+  }, [latestRun, loadedRunId, fetchEvidenceGraph]);
 
   if (isLoading || (isGraphLoading && events.length === 0)) {
     return (
