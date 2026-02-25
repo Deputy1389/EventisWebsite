@@ -1,74 +1,88 @@
-import Link from "next/link";
-import {   Shield, Sparkles } from "lucide-react";
+﻿import Link from "next/link";
+import { Shield, Zap, ArrowRight, Activity } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden pb-16 pt-18 md:pb-24 md:pt-32 bg-[#0F1217]">
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#232A34_1px,transparent_1px)] [background-size:24px_24px]" />
-      
-      <div className="relative mx-auto max-w-7xl px-4 md:px-6">
-        <div className="float-in flex justify-center mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#232A34] bg-[#161B22] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#C6A85E]">
-            <Shield className="h-3.5 w-3.5" />
-            Intelligence Infrastructure for Medical Litigation
+    <section className="relative overflow-hidden pb-24 pt-32 md:pb-32 md:pt-48 bg-[#0F1217]">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#232A34_1px,transparent_1px)] [background-size:32px:32px]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-[#C6A85E]/5 rounded-full blur-[120px] -z-10" />
+
+      <div className="relative mx-auto max-w-7xl px-6 md:px-8">
+        <div className="float-in flex justify-center mb-12">
+          <div className="inline-flex items-center gap-3 rounded-full border border-[#C6A85E]/20 bg-[#C6A85E]/5 px-5 py-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#C6A85E]">
+            <Zap className="h-4 w-4 fill-[#C6A85E]" />
+            Deterministic Intelligence Layer for Litigation
           </div>
         </div>
 
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="float-in text-balance text-5xl font-extrabold leading-tight md:text-7xl text-white mb-8">
-            The Intelligence Layer for
-            <span className="block text-[#C6A85E]"> Medical Litigation.</span>
+        <div className="text-center max-w-5xl mx-auto">
+          <h1 className="float-in text-balance text-6xl font-serif leading-[1.1] md:text-8xl text-white mb-10 tracking-tight">
+            The Truth in <br />
+            <span className="text-[#C6A85E] italic font-medium">Every Single Page.</span>
           </h1>
-          <p className="float-in mt-6 text-lg text-[#9CA3AF] md:text-xl leading-relaxed max-w-3xl mx-auto mb-12">
-            Surface defense exposure, map causation chains, and generate court-ready intelligence from thousands of pages in minutes.
+          <p className="float-in mt-8 text-xl text-slate-400 md:text-2xl leading-relaxed max-w-3xl mx-auto mb-16 font-light">
+            Linecite transforms messy medical records into structured, citeable evidence graphs. 
+            Automate your chronologies with <span className="text-white font-medium">100% auditability</span> for every extracted fact.
           </p>
-          
-          <div className="float-in flex flex-col items-center gap-4 sm:flex-row sm:justify-center mb-24">
-            <Button size="lg" asChild className="bg-[#C6A85E] hover:bg-[#B08D4A] text-black font-black h-14 px-8 text-base shadow-2xl shadow-[#C6A85E]/20">
+
+          <div className="float-in flex flex-col items-center gap-6 sm:flex-row sm:justify-center mb-32">
+            <Button size="lg" asChild className="bg-[#C6A85E] hover:bg-[#B08D4A] text-black font-black h-16 px-12 text-lg rounded-xl shadow-2xl shadow-[#C6A85E]/20">
               <Link href="/pilot">
-                REQUEST INTELLIGENCE DEMO
+                START YOUR ANALYSIS <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button variant="outline" size="lg" asChild className="border-[#232A34] text-white hover:bg-white/5 h-14 px-8 text-base font-bold">
+            <Button variant="ghost" size="lg" asChild className="text-slate-400 hover:text-white hover:bg-white/5 h-16 px-10 text-lg font-bold">
               <Link href="/sample">
-                VIEW SAMPLE INTELLIGENCE BRIEF™
+                VIEW SAMPLE BRIEF™
               </Link>
             </Button>
           </div>
         </div>
 
-        {/* Structured UI Animation Placeholder */}
-        <div className="float-in relative mx-auto max-w-5xl rounded-2xl border border-[#232A34] bg-[#161B22] p-2 shadow-2xl">
-          <div className="rounded-xl border border-[#232A34] bg-[#0F1217] aspect-video flex overflow-hidden">
-            <aside className="w-1/4 border-r border-[#232A34] p-4 space-y-4">
-              <div className="h-2 w-1/2 bg-[#232A34] rounded" />
-              <div className="space-y-2">
-                {[1,2,3,4,5].map(i => (
-                  <div key={i} className="h-12 w-full bg-[#161B22] border border-[#232A34] rounded" />
+        {/* Product Preview Card */}
+        <div className="float-in relative mx-auto max-w-6xl rounded-[32px] border border-[#232A34] bg-[#161B22]/80 backdrop-blur-xl p-3 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+          <div className="rounded-[24px] border border-[#232A34] bg-[#0F1217] aspect-[16/9] flex overflow-hidden shadow-inner">
+            <aside className="w-1/4 border-r border-[#232A34] p-6 space-y-6 bg-[#0F1217]">
+              <div className="flex items-center gap-2 mb-8">
+                <Activity size={16} className="text-[#C6A85E]" />
+                <div className="h-2 w-24 bg-[#232A34] rounded-full" />
+              </div>
+              <div className="space-y-4">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className={`h-12 w-full rounded-xl border transition-all ${i === 2 ? 'bg-[#C6A85E]/10 border-[#C6A85E]/30' : 'bg-[#161B22] border-[#232A34]'}`} />  
                 ))}
               </div>
             </aside>
-            <main className="flex-1 p-6 space-y-6">
-              <div className="flex justify-between">
-                <div className="h-8 w-1/3 bg-[#232A34] rounded" />
-                <div className="h-8 w-1/4 bg-[#C6A85E]/20 rounded border border-[#C6A85E]/30" />
+            <main className="flex-1 p-10 space-y-10">
+              <div className="flex justify-between items-end">
+                <div className="space-y-2">
+                  <div className="h-2 w-32 bg-[#232A34] rounded-full" />
+                  <div className="h-10 w-64 bg-white/5 rounded-xl" />
+                </div>
+                <div className="flex gap-4">
+                   <div className="h-16 w-24 bg-[#C6A85E]/10 rounded-2xl border border-[#C6A85E]/20" />
+                   <div className="h-16 w-24 bg-[#274C77]/10 rounded-2xl border border-[#274C77]/20" />
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="h-24 bg-[#161B22] border border-[#232A34] rounded" />
-                <div className="h-24 bg-[#161B22] border border-[#232A34] rounded" />
-                <div className="h-24 bg-[#161B22] border border-[#232A34] rounded" />
+              <div className="grid grid-cols-3 gap-6">
+                <div className="h-32 bg-[#161B22] border border-[#232A34] rounded-2xl shadow-lg" />
+                <div className="h-32 bg-[#161B22] border border-[#232A34] rounded-2xl shadow-lg" />
+                <div className="h-32 bg-[#161B22] border border-[#232A34] rounded-2xl shadow-lg" />
               </div>
-              <div className="space-y-3">
-                <div className="h-4 w-full bg-[#161B22] rounded" />
-                <div className="h-4 w-5/6 bg-[#161B22] rounded" />
-                <div className="h-4 w-4/6 bg-[#161B22] rounded" />
+              <div className="space-y-4">
+                <div className="h-4 w-full bg-white/5 rounded-full" />
+                <div className="h-4 w-5/6 bg-white/5 rounded-full" />
+                <div className="h-4 w-4/6 bg-white/5 rounded-full" />
               </div>
             </main>
           </div>
-          <div className="absolute -bottom-6 -right-6 h-32 w-32 bg-[#C6A85E]/10 blur-3xl" />
-          <div className="absolute -top-6 -left-6 h-32 w-32 bg-[#274C77]/10 blur-3xl" />
+          
+          {/* Decorative Elements */}
+          <div className="absolute -bottom-10 -right-10 h-64 w-64 bg-[#C6A85E]/10 blur-[100px] -z-10" />
+          <div className="absolute -top-10 -left-10 h-64 w-64 bg-[#274C77]/10 blur-[100px] -z-10" />
         </div>
       </div>
     </section>

@@ -6,7 +6,7 @@ import { withServerAuthHeaders } from "@/lib/citeline-server";
 
 export const runtime = "nodejs";
 
-export async function GET(_: Request) {
+export async function GET() {
   const session = await auth();
 
   // Allow unauthenticated requests to list firms
