@@ -1,197 +1,90 @@
-"use client";
+﻿"use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Network, Loader2, AlertCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { Gavel, Loader2, ShieldCheck, Zap } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useState, Suspense, useEffect } from "react";
-
-const showDemoHint = ["1", "true", "yes", "on"].includes(
-    (process.env.NEXT_PUBLIC_AUTH_ALLOW_DEMO_USERS ?? "false").toLowerCase()
-);
-
-function SignInForm() {
-    const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get("callbackUrl") || "/app";
-    const error = searchParams.get("error");
-
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [rememberMe, setRememberMe] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-
-    useEffect(() => {
-        const savedEmail = localStorage.getItem("rememberedEmail");
-        if (savedEmail) {
-            setEmail(savedEmail);
-            setRememberMe(true);
-        }
-    }, []);
-
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setIsLoading(true);
-
-        if (rememberMe) {
-            localStorage.setItem("rememberedEmail", email);
-        } else {
-            localStorage.removeItem("rememberedEmail");
-        }
-
-        await signIn("credentials", {
-            email,
-            password,
-            callbackUrl,
-        });
-
-        setIsLoading(false);
-    }
-
-    return (
-        <div className="min-h-[80vh] flex items-center justify-center px-4">
-            <div className="w-full max-w-sm space-y-8">
-                {/* Logo */}
-                <div className="text-center">
-                    <Link href="/" className="inline-flex items-center space-x-2 font-bold text-2xl text-primary">
-                        <Network className="h-8 w-8" />
-                        <span>Linecite</span>
-                    </Link>
-                    <p className="text-muted-foreground mt-2">Sign in to your workspace</p>
-                </div>
-
-                <Card>
-                    <CardHeader className="space-y-1">
-                        <CardTitle className="text-xl">Sign In</CardTitle>
-                        <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {error && (
-                            <div className="flex items-center gap-2 p-3 mb-4 rounded-md bg-destructive/10 text-destructive text-sm">
-                                <AlertCircle className="h-4 w-4 shrink-0" />
-                                Invalid email or password. Please try again.
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="demo@ontarus.ai"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    autoComplete="email"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    autoComplete="current-password"
-                                />
-                            </div>
-                            <div className="flex items-center space-x-2 py-1">
-                                <input
-                                    type="checkbox"
-                                    id="remember"
-                                    checked={rememberMe}
-                                    onChange={(e) => setRememberMe(e.target.checked)}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                />
-                                <label htmlFor="remember" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                    Remember my email
-                                </label>
-                            </div>
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? (
-                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</>
-                                ) : (
-                                    "Sign In"
-                                )}
-                            </Button>
-                        </form>
-
-                        <div className="relative my-6">
-                            <div className="absolute inset-0 flex items-center">
-                                <Separator />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <Button variant="outline" onClick={() => signIn("google", { callbackUrl })}>
-                                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                                    <path
-                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                                        fill="#4285F4"
-                                    />
-                                    <path
-                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                                        fill="#34A853"
-                                    />
-                                    <path
-                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                                        fill="#FBBC05"
-                                    />
-                                    <path
-                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.14-4.53z"
-                                        fill="#EA4335"
-                                    />
-                                    <path d="M1 1h22v22H1z" fill="none" />
-                                </svg>
-                                Google
-                            </Button>
-                            <Button variant="outline" onClick={() => signIn("apple", { callbackUrl })}>
-                                <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M17.05 20.28c-.96.95-2.04 1.78-3.14 1.78-1.14 0-1.54-.71-2.91-.71-1.35 0-1.84.69-2.91.71-1.07.02-2.15-.84-3.14-1.78C2.93 18.29 1 14.52 1 11.37c0-3.16 2.04-4.83 4-4.83 1.04 0 2.02.72 2.65.72.63 0 1.75-.85 3.01-.85 1.07 0 2.41.61 3.28 1.74-2.13 1.28-1.78 4.14.43 5.04-1.04 2.5-2.28 5.06-4.32 7.09zm-3.05-14.8c-.56.68-1.53 1.14-2.42 1.06-.11-.84.34-1.81.9-2.46.61-.72 1.63-1.15 2.42-1.07.11.85-.34 1.79-.9 2.47z" />
-                                </svg>
-                                Apple
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {showDemoHint && (
-                    <div className="rounded-lg border bg-muted/40 p-4 text-center text-sm text-muted-foreground">
-                        <p className="font-medium text-foreground mb-1">Demo Credentials</p>
-                        <p>Email: <code className="text-xs bg-muted px-1 py-0.5 rounded">demo@ontarus.ai</code></p>
-                        <p>Password: <code className="text-xs bg-muted px-1 py-0.5 rounded">eventis123</code></p>
-                    </div>
-                )}
-
-                <p className="text-center text-sm text-muted-foreground">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/pilot" className="text-primary hover:underline">
-                        Request a pilot
-                    </Link>
-                </p>
-            </div>
-        </div>
-    );
-}
 
 export default function SignInPage() {
-    return (
-        <Suspense fallback={
-            <div className="min-h-[80vh] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-background-dark flex flex-col items-center justify-center p-6 -m-8">
+      <div className="w-full max-w-md space-y-10">
+        {/* Logo */}
+        <div className="flex flex-col items-center text-center space-y-4">
+          <Link href="/" className="flex items-center gap-3 text-white group">
+            <div className="size-12 rounded-xl bg-primary flex items-center justify-center text-white shadow-2xl shadow-primary/20 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-[32px]">balance</span>
             </div>
-        }>
-            <SignInForm />
-        </Suspense>
-    );
+          </Link>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black text-white uppercase tracking-tight">LineCite</h1>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Deterministic Forensic Intelligence</p>
+          </div>
+        </div>
+
+        {/* Card */}
+        <div className="bg-surface-dark border border-border-dark rounded-[32px] p-10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+          
+          <div className="space-y-8">
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-white tracking-tight">Authentication Required</h2>
+              <p className="text-sm text-slate-500 mt-2">Enter your credentials to access the command center.</p>
+            </div>
+
+            <form className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Practice Email</label>
+                <input 
+                  type="email" 
+                  placeholder="e.g. partner@litigation.law" 
+                  className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-slate-700"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">Secure Key</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  className="w-full h-12 bg-background-dark border border-border-dark rounded-xl px-4 text-white text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-slate-700"
+                />
+              </div>
+
+              <button 
+                type="button"
+                onClick={() => { setLoading(true); signIn('google', { callbackUrl: '/app/cases' }); }}
+                disabled={loading}
+                className="w-full h-14 bg-primary hover:bg-blue-600 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 mt-8 active:scale-[0.98]"
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : <Zap size={20} className="fill-white" />}
+                Authorize Session
+              </button>
+            </form>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-dark"></div></div>
+              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest"><span className="bg-surface-dark px-4 text-slate-600">Secure Protocol</span></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col items-center p-4 rounded-2xl bg-background-dark/50 border border-border-dark/50 text-center space-y-2">
+                <ShieldCheck size={18} className="text-emerald-500" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase leading-tight">SOC2 Type II<br/>Compliant</span>
+              </div>
+              <div className="flex flex-col items-center p-4 rounded-2xl bg-background-dark/50 border border-border-dark/50 text-center space-y-2">
+                <Gavel size={18} className="text-primary" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase leading-tight">Admissibility<br/>Verified</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest">
+          Limited access for verified plaintiff-side firms only.
+        </p>
+      </div>
+    </div>
+  );
 }

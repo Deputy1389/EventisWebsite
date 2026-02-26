@@ -1,88 +1,85 @@
-"use client";
-
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Network, Database, FileText, ArrowRight } from "lucide-react";
-
-export default function TechPage() {
-    return (
-        <div className="py-20">
-            <div className="container mx-auto px-4">
-                {/* Header */}
-                <div className="text-center mb-16">
-                    <h1 className="text-4xl font-bold tracking-tight mb-6">Not a Chatbot. An Ontology Engine.</h1>
-                    <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                        LLMs are great at writing poetry. They are terrible at legal accuracy. Linecite uses a graph-based ontology to ensure every fact is traceable.
-                    </p>
-                </div>
-
-                {/* The Graph Diagram (CSS/HTML representation) */}
-                <div className="max-w-4xl mx-auto mb-20">
-                    <div className="rounded-xl border bg-muted/10 p-12 flex flex-col items-center justify-center relative overflow-hidden">
-                        <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16 z-10">
-                            {/* Nodes */}
-                            <div className="flex flex-col items-center">
-                                <div className="w-24 h-24 rounded-full bg-background border-2 border-primary flex items-center justify-center shadow-lg mb-4 z-10">
-                                    <FileText className="h-8 w-8 text-primary" />
-                                </div>
-                                <span className="font-bold text-sm uppercase tracking-wide">Document</span>
-                            </div>
-
-                            <ArrowRight className="h-6 w-6 text-muted-foreground hidden md:block" />
-
-                            <div className="flex flex-col items-center">
-                                <div className="w-24 h-24 rounded-full bg-background border-2 border-primary flex items-center justify-center shadow-lg mb-4 z-10">
-                                    <Network className="h-8 w-8 text-primary" />
-                                </div>
-                                <span className="font-bold text-sm uppercase tracking-wide">Event Graph</span>
-                            </div>
-
-                            <ArrowRight className="h-6 w-6 text-muted-foreground hidden md:block" />
-
-                            <div className="flex flex-col items-center">
-                                <div className="w-24 h-24 rounded-full bg-background border-2 border-primary flex items-center justify-center shadow-lg mb-4 z-10">
-                                    <Database className="h-8 w-8 text-primary" />
-                                </div>
-                                <span className="font-bold text-sm uppercase tracking-wide">Structured Output</span>
-                            </div>
-                        </div>
-
-                        {/* Connecting lines for mobile vertical layout (concept) */}
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 to-transparent -z-0" />
-                    </div>
-                    <p className="text-center text-sm text-muted-foreground mt-4">
-                        Simplified view of the Linecite Extraction Pipeline
-                    </p>
-                </div>
-
-                {/* Deep Dive */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-w-5xl mx-auto">
-                    <div>
-                        <h3 className="text-2xl font-bold mb-4">The Ontology Model</h3>
-                        <p className="text-muted-foreground mb-4 leading-relaxed">
-                            Linecite models each case as a knowledge graph consisting of <strong>Documents</strong>, <strong>Pages</strong>, <strong>Events</strong>, <strong>Providers</strong>, and <strong>Billing Records</strong>.
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed">
-                            A &quot;Chronology&quot; is simply a projection of this graph: we sort Events by date and render them. This means we can re-project the same data into a &quot;Specials Summary&quot; or a &quot;Provider List&quot; without re-reading the documents.
-                        </p>
-                    </div>
-                    <div>
-                        <h3 className="text-2xl font-bold mb-4">Missing Record Detection</h3>
-                        <p className="text-muted-foreground mb-4 leading-relaxed">
-                            Because we understand the graph, we can find holes in it. If we see a &quot;Referral to Dr. Smith&quot; event on Jan 1st, but no records from Dr. Smith, our graph algorithms flag a &quot;Missing Record&quot; gap.
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed">
-                            This is impossible for standard LLM summarizers, which only look at the text in front of them.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="text-center mt-20">
-                    <Button size="lg" asChild>
-                        <Link href="/sample">See the Output</Link>
-                    </Button>
-                </div>
+﻿export default function TechPage() {
+  return (
+    <div className="bg-background-dark text-slate-200 font-display min-h-screen flex flex-col overflow-x-hidden">
+      <main className="flex-grow flex flex-col items-center">
+        {/* Hero Section */}
+        <section className="w-full max-w-5xl px-8 py-24 md:py-32">
+          <div className="flex flex-col gap-8">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.25em] w-fit">
+              <span className="material-symbols-outlined text-[16px]">verified</span>
+              Technical Whitepaper
             </div>
-        </div>
-    );
+            <h1 className="text-5xl md:text-7xl font-black leading-[1.1] tracking-tight text-white uppercase">
+              Methodology & <br/>
+              <span className="text-primary italic">Technical Rigor</span>
+            </h1>
+            <p className="text-xl text-slate-400 max-w-3xl leading-relaxed font-medium">
+              LineCite employs a deterministic pipeline to ensure evidentiary standards and absolute citation accuracy for medical chronologies. Our architecture prioritizes reproducibility over generative approximation.
+            </p>
+          </div>
+        </section>
+
+        {/* Pipeline Diagram */}
+        <section className="w-full max-w-5xl px-8 pb-32">
+          <div className="flex flex-col gap-16">
+            <div className="border-l-4 border-primary pl-8 py-2">
+              <h2 className="text-3xl font-black text-white mb-4 uppercase tracking-tight">The Deterministic Pipeline</h2>
+              <p className="text-slate-500 text-lg max-w-2xl font-medium">
+                LineCite enforces strict data extraction rules ensuring that identical inputs yield identical outputs, every time.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <ProcessCard 
+                num="01" 
+                icon="input" 
+                title="Ingestion & OCR" 
+                text="Raw medical records are processed via high-fidelity OCR. We preserve spatial context for handwritten notes and charts." 
+              />
+              <ProcessCard 
+                num="02" 
+                icon="filter_center_focus" 
+                title="Deterministic Extraction" 
+                text="Structured rules identify clinical events without interpretation. Entities are isolated using rigid pattern matching." 
+              />
+              <ProcessCard 
+                num="03" 
+                icon="fact_check" 
+                title="Verification" 
+                text="Every point is cross-referenced. Points not tied to specific pixel coordinates in the source PDF are rejected." 
+              />
+            </div>
+
+            <div className="mt-12 p-10 rounded-[32px] bg-primary/5 border border-primary/10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <span className="material-symbols-outlined text-8xl text-primary">verified_user</span>
+              </div>
+              <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3 uppercase tracking-wider">
+                <span className="material-symbols-outlined text-primary text-3xl">verified_user</span>
+                Determinism Guarantee
+              </h3>
+              <p className="text-slate-400 text-lg leading-relaxed font-medium max-w-3xl">
+                LineCite enforces deterministic extraction. Identical source documents will always produce identical chronologies. This eliminates the variability and hallucination risks common in standard LLM systems.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function ProcessCard({ num, icon, title, text }: { num: string, icon: string, title: string, text: string }) {
+  return (
+    <div className="group relative flex flex-col gap-6 p-8 rounded-3xl bg-surface-dark border border-border-dark hover:border-primary/40 transition-all duration-500 shadow-sm">
+      <div className="absolute top-8 right-8 text-slate-800 text-7xl font-black opacity-20 group-hover:opacity-40 transition-opacity select-none font-mono tracking-tighter">{num}</div>
+      <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+        <span className="material-symbols-outlined text-3xl">{icon}</span>
+      </div>
+      <div className="space-y-3 z-10">
+        <h3 className="text-xl font-black text-white uppercase tracking-tight">{title}</h3>
+        <p className="text-slate-500 text-sm leading-relaxed font-medium">{text}</p>
+      </div>
+    </div>
+  );
 }

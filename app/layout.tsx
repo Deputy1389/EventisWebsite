@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { IBM_Plex_Mono, Manrope, Spectral } from "next/font/google";
+﻿import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
-import { Footer } from "@/components/layout/Footer";
-import { Navbar } from "@/components/layout/Navbar";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
@@ -11,27 +9,20 @@ import "./globals.css";
 
 export const dynamic = "force-dynamic";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const spectral = Spectral({
-  variable: "--font-spectral",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Linecite by Ontarus - Court-ready Medical Chronologies",
+  title: "LineCite - Deterministic Medical Intelligence for Litigation",
   description:
-    "Linecite turns medical record PDFs into a structured event graph, then generates chronologies, specials, and missing-records reports with citations.",
+    "LineCite produces citation-anchored, export-validated medical chronologies built specifically for plaintiff-side litigation.",
 };
 
 export default function RootLayout({
@@ -40,21 +31,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
       <body
-        className={`${manrope.variable} ${plexMono.variable} ${spectral.variable} min-h-screen font-sans antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <AuthProvider>
             <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
+              {children}
             </div>
             <Toaster />
           </AuthProvider>
@@ -63,4 +55,3 @@ export default function RootLayout({
     </html>
   );
 }
-
