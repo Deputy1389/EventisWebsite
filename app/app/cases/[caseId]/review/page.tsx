@@ -1,27 +1,11 @@
 ﻿"use client";
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  ChevronLeft,
-  FileText,
-  Layout,
   Loader2,
-  Share2,
-  TrendingUp,
-  Shield,
-  Activity,
-  Search,
-  CheckCircle,
-  AlertCircle,
-  Flag,
-  Gavel,
-  Difference,
-  Link as LinkIcon
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 type Run = {
   id: string;
@@ -40,11 +24,6 @@ type CitationRecord = {
   source_document_id: string;
   page_number: number;
   snippet?: string;
-};
-
-type PageRecord = {
-  source_document_id: string;
-  page_number: number;
 };
 
 type EventRecord = {
@@ -71,6 +50,7 @@ type AuditEvent = {
 };
 
 type EvidenceGraphLike = {
+  evidence_graph?: Record<string, unknown>;
   events?: EventRecord[];
   citations?: CitationRecord[];
   extensions?: Record<string, unknown>;
@@ -86,7 +66,12 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
   const [matter, setMatter] = useState<Matter | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [events, setEvents] = useState<AuditEvent[]>([]);
-  const [commandCenter, setCommandCenter] = useState<any>({
+  const [commandCenter, setCommandCenter] = useState<{
+    contradictionMatrix: Record<string, unknown>[];
+    defenseAttackPaths: Record<string, unknown>[];
+    causationChains: Record<string, unknown>[];
+    collapseCandidates: Record<string, unknown>[];
+  }>({
     contradictionMatrix: [],
     defenseAttackPaths: [],
     causationChains: [],
@@ -178,10 +163,10 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
       setEvents(transformed);
       setCommandCenter({
-        contradictionMatrix: (ext.contradiction_matrix as any[]) || [],
-        defenseAttackPaths: (ext.defense_attack_paths as any[]) || [],
-        causationChains: (ext.causation_chains as any[]) || [],
-        collapseCandidates: (ext.case_collapse_candidates as any[]) || []
+        contradictionMatrix: (ext.contradiction_matrix as Record<string, unknown>[]) || [],
+        defenseAttackPaths: (ext.defense_attack_paths as Record<string, unknown>[]) || [],
+        causationChains: (ext.causation_chains as Record<string, unknown>[]) || [],
+        collapseCandidates: (ext.case_collapse_candidates as Record<string, unknown>[]) || []
       });
     } finally {
       setIsGraphLoading(false);
@@ -397,7 +382,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
             <ExposureSection icon="link" title="Causation Chain" color="text-emerald-400">
               <div className="pl-4 border-l border-border-dark space-y-6">
-                {commandCenter.causationChains[0]?.rungs?.map((rung: any, i: number) => (
+                {(commandCenter.causationChains[0] as any)?.rungs?.map((rung: any, i: number) => (
                   <div key={i} className="relative">
                     <div className="absolute -left-[21px] top-1.5 size-2 rounded-full bg-emerald-500"></div>
                     <h5 className="text-[10px] font-black text-white uppercase tracking-widest">{rung.rung_type}</h5>
@@ -422,7 +407,7 @@ function Metric({ title, value, color }: { title: string, value: number, color: 
   );
 }
 
-function ValidationStatus({ label, status, color }: { label: string, status: string, color: string }) {
+function ValidationStatus({ label, status, color }: { label: string, status: string, color: string }) { 
   return (
     <div className="flex items-center gap-2">
       <span className="text-slate-500">{label}:</span>
@@ -460,7 +445,7 @@ function ExposureSection({ icon, title, color, children }: { icon: string, title
       <div className="p-4 flex items-center justify-between bg-surface-dark/50 border-b border-border-dark">
         <div className="flex items-center gap-3">
           <span className={`material-symbols-outlined ${color} text-[18px]`}>{icon}</span>
-          <span className="text-[10px] font-black text-white uppercase tracking-widest">{title}</span>
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">{title}</span>  
         </div>
       </div>
       <div className="p-4">{children}</div>
@@ -472,10 +457,10 @@ function RiskCard({ title, risk, text }: { title: string, risk: number, text: st
   return (
     <div className="bg-danger/5 border border-danger/10 rounded-xl p-4">
       <div className="flex justify-between items-start mb-2">
-        <h4 className="text-[10px] font-black text-danger uppercase tracking-widest">{title}</h4>
+        <h4 className="text-[10px] font-black text-danger uppercase tracking-widest">{title}</h4>       
         <span className="text-[10px] font-mono text-danger/60">{risk}% RISK</span>
       </div>
-      <p className="text-[11px] text-slate-400 font-medium leading-relaxed italic">"{text}"</p>
+      <p className="text-[11px] text-slate-400 font-medium leading-relaxed italic">&quot;{text}&quot;</p>
     </div>
   );
 }

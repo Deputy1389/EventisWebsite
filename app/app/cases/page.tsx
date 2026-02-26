@@ -5,22 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
   Loader2,
-  Plus,
-  Search,
-  Activity,
-  FolderOpen,
-  History,
   TrendingUp,
   Shield,
-  ArrowRight,
-  Gavel,
-  Settings,
-  Logout
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { signOut } from "next-auth/react";
 

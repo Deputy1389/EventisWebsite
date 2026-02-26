@@ -2,18 +2,16 @@
 
 import { useState } from "react";
 import { 
-  Settings, 
   ShieldAlert, 
   Share2, 
   Users, 
   Receipt, 
   Activity, 
   RotateCcw,
-  Percent,
-  History,
   Trash2,
   Plus
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
   const [minConfidence, setMinConfidence] = useState(85);
