@@ -12,6 +12,7 @@
   "dependencies": {
     "@stripe/stripe-js": "^8.9.0",
     "@types/bcryptjs": "^2.4.6",
+    "@xyflow/react": "^12.10.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -23,6 +24,8 @@
     "radix-ui": "^1.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-pdf": "^10.4.1",
+    "recharts": "^3.7.0",
     "resend": "^6.9.2",
     "sonner": "^2.0.7",
     "stripe": "^20.4.0",
