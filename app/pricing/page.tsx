@@ -1,7 +1,42 @@
+"use client";
+
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+
+const PLANS = {
+  STARTER: "price_starter_placeholder",
+  PRO: "price_pro_placeholder",
+};
 
 export default function PricingPage() {
+  const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
+
+  const onCheckout = async (priceId: string) => {
+    try {
+      setLoadingPriceId(priceId);
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ priceId }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoadingPriceId(null);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background-dark">
       <main className="flex-1">
@@ -21,31 +56,35 @@ export default function PricingPage() {
           <div className="grid md:grid-cols-3 gap-8 mb-32">
             <PricingCard 
               title="Starter" 
-              price="Contact Sales" 
+              price="$499" 
+              period="/mo"
               description="For smaller PI firms handling selective cases."
               features={[
-                "Per-matter processing",
-                "Basic chronology export",
+                "Up to 5 matters / mo",
+                "Standard chronology export",
                 "Audit mode included",
                 "Email support"
               ]}
-              cta="Request Firm Access"
-              href="/pilot?type=firm"
+              cta="Subscribe Now"
+              onClick={() => onCheckout(PLANS.STARTER)}
+              isLoading={loadingPriceId === PLANS.STARTER}
             />
             <PricingCard 
               title="Pro" 
-              price="Contact Sales" 
+              price="$1,499" 
+              period="/mo"
               description="For high-volume firms and med-mal practice areas."
               features={[
+                "Up to 20 matters / mo",
                 "Priority processing queue",
-                "Bulk upload capabilities",
                 "Expert binder generation",
                 "Advanced gap reporting",
                 "Priority email support"
               ]}
               highlighted
-              cta="Request Firm Access"
-              href="/pilot?type=firm"
+              cta="Subscribe Now"
+              onClick={() => onCheckout(PLANS.PRO)}
+              isLoading={loadingPriceId === PLANS.PRO}
             />
             <PricingCard 
               title="Enterprise" 
@@ -59,7 +98,7 @@ export default function PricingPage() {
                 "24/7 priority support"
               ]}
               cta="Talk to Sales"
-              href="/pilot?type=firm"
+              href="mailto:patrick@linecite.com"
             />
           </div>
 
@@ -102,7 +141,7 @@ export default function PricingPage() {
                   <span>Custom SLAs and performance tiers</span>
                 </li>
               </ul>
-              <Link href="/pilot?type=api" className="inline-block text-xs font-black uppercase tracking-widest text-primary hover:gap-4 transition-all">
+              <Link href="mailto:patrick@linecite.com" className="inline-block text-xs font-black uppercase tracking-widest text-primary hover:gap-4 transition-all">
                 Talk to Engineering <Icon name="chevron_right" className="w-4 h-4 inline-block ml-1" />
               </Link>
             </div>
@@ -113,19 +152,36 @@ export default function PricingPage() {
   );
 }
 
-function PricingCard({ title, price, description, features, highlighted, cta, href }: { 
+function PricingCard({ 
+  title, 
+  price, 
+  period,
+  description, 
+  features, 
+  highlighted, 
+  cta, 
+  href,
+  onClick,
+  isLoading
+}: { 
   title: string, 
   price: string, 
+  period?: string,
   description: string, 
   features: string[],
   highlighted?: boolean,
   cta: string,
-  href: string
+  href?: string,
+  onClick?: () => void,
+  isLoading?: boolean
 }) {
   return (
-    <div className={`p-10 rounded-3xl border ${highlighted ? 'border-primary shadow-2xl shadow-primary/10' : 'border-border-dark'} bg-background-dark/50 flex flex-col`}>
+    <div className={`p-10 rounded-3xl border ${highlighted ? "border-primary shadow-2xl shadow-primary/10" : "border-border-dark"} bg-background-dark/50 flex flex-col`}>
       <h4 className="text-xl font-black text-white uppercase tracking-widest mb-2">{title}</h4>
-      <div className="text-3xl font-black text-white mb-4 uppercase tracking-tighter">{price}</div>
+      <div className="flex items-baseline gap-1 mb-4">
+        <span className="text-3xl font-black text-white uppercase tracking-tighter">{price}</span>
+        {period && <span className="text-slate-500 text-sm font-bold uppercase">{period}</span>}
+      </div>
       <p className="text-slate-500 text-sm mb-8 leading-relaxed">{description}</p>
       <ul className="space-y-4 mb-10 flex-1">
         {features.map((feature, i) => (
@@ -135,9 +191,20 @@ function PricingCard({ title, price, description, features, highlighted, cta, hr
           </li>
         ))}
       </ul>
-      <Link href={href} className={`block w-full text-center py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${highlighted ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-dark' : 'bg-surface-dark text-white border border-border-dark hover:bg-white/5'}`}>
-        {cta}
-      </Link>
+      {href ? (
+        <Link href={href} className={`block w-full text-center py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${highlighted ? "bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-dark" : "bg-surface-dark text-white border border-border-dark hover:bg-white/5"}`}>
+          {cta}
+        </Link>
+      ) : (
+        <button 
+          onClick={onClick}
+          disabled={isLoading}
+          className={`w-full text-center py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 flex items-center justify-center gap-2 ${highlighted ? "bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-dark" : "bg-surface-dark text-white border border-border-dark hover:bg-white/5"}`}
+        >
+          {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+          {cta}
+        </button>
+      )}
     </div>
   );
 }

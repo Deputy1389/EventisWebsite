@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { FolderOpen, LayoutDashboard, LogOut, Scale, Search, Settings, Upload } from "lucide-react";
+import { FolderOpen, LayoutDashboard, LogOut, Scale, Search, Settings, Upload, Crosshair } from "lucide-react";
 
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ export function Sidebar() {
     { href: "/app", label: "Dashboard", icon: LayoutDashboard },
     { href: "/app/cases", label: "All Matters", icon: FolderOpen },
     { href: "/app/new-case", label: "New Matter", icon: Upload },
+    { href: "/app/lead-engine", label: "Lead Engine", icon: Crosshair },
   ];
 
   const userInitials = session?.user?.name
@@ -56,7 +57,7 @@ export function Sidebar() {
               href={item.href}
               className={cn(
                 "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
-                pathname === item.href
+                (item.href === "/app" ? pathname === item.href : pathname.startsWith(item.href))
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
