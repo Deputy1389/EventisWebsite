@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       customer_email: session?.user?.email || undefined,
       metadata: {
         userId: session?.user?.id || "anonymous",
+        plan: priceId === "price_1T7Vm3GrRrrdQrkXlWEtBE00" ? "starter" : "pro",
       },
     });
 
