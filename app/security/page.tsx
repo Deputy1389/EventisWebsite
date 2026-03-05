@@ -60,7 +60,7 @@ export default function SecurityPage() {
             <p className="text-slate-500 text-sm leading-relaxed mb-6">
               We maintain a curated list of subprocessors who meet our high security standards. A full list is available upon request.
             </p>
-            <a href="mailto:security@linecite.com" className="text-xs font-black uppercase tracking-widest text-primary hover:underline">Request List</a>
+            <a href="mailto:patrick@linecite.com" className="text-xs font-black uppercase tracking-widest text-primary hover:underline">Request List</a>
           </div>
           <div>
             <h3 className="text-lg font-black text-white uppercase tracking-widest mb-6">Data Residency</h3>

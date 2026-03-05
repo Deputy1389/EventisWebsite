@@ -47,7 +47,7 @@ export function Footer() {
           <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-slate-600">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <a href="mailto:support@linecite.com" className="hover:text-white transition-colors">Contact</a>
+            <a href="mailto:patrick@linecite.com" className="hover:text-white transition-colors">Contact</a>
           </div>
           <p className="text-[10px] font-bold text-slate-700 uppercase tracking-[0.2em]">
             © 2026 LineCite Inc. All rights reserved.

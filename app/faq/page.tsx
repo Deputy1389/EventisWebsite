@@ -110,7 +110,7 @@ export default function FAQPage() {
           <p className="text-slate-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
             Contact our team for specific inquiries regarding firm access or API documentation.
           </p>
-          <a href="mailto:support@linecite.com" className="inline-flex items-center gap-3 text-xs font-black uppercase tracking-widest text-primary hover:gap-6 transition-all">
+          <a href="mailto:patrick@linecite.com" className="inline-flex items-center gap-3 text-xs font-black uppercase tracking-widest text-primary hover:gap-6 transition-all">
             Email Support <Icon name="chevron_right" className="w-5 h-5" />
           </a>
         </div>

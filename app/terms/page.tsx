@@ -96,8 +96,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-white mb-3">12. Contact</h2>
             <p className="text-slate-400">
               For questions about these Terms, contact us at{" "}
-              <a href="mailto:legal@linecite.com" className="text-primary hover:underline">
-                legal@linecite.com
+              <a href="mailto:patrick@linecite.com" className="text-primary hover:underline">
+                patrick@linecite.com
               </a>
             </p>
           </section>

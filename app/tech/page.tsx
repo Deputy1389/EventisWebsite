@@ -166,7 +166,7 @@ export default function TechPage() {
 
         <section className="bg-primary px-6 py-24 lg:px-40 text-center w-full">
           <h2 className="text-3xl font-black text-white lg:text-5xl mb-8 uppercase tracking-widest">Questions about our pipeline?</h2>
-          <a href="mailto:engineering@linecite.com" className="inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.4em] text-white hover:gap-8 transition-all">
+          <a href="mailto:patrick@linecite.com" className="inline-flex items-center gap-3 text-sm font-black uppercase tracking-[0.4em] text-white hover:gap-8 transition-all">
             Talk to Engineering <Icon name="chevron_right" className="w-6 h-6" />
           </a>
         </section>

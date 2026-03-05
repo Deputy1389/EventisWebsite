@@ -73,8 +73,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-white mb-3">8. Contact Us</h2>
             <p className="text-slate-400">
               For privacy-related inquiries, contact us at{" "}
-              <a href="mailto:privacy@linecite.com" className="text-primary hover:underline">
-                privacy@linecite.com
+              <a href="mailto:patrick@linecite.com" className="text-primary hover:underline">
+                patrick@linecite.com
               </a>
             </p>
           </section>
