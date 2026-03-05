@@ -6,9 +6,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+// Real Price IDs created in live Stripe account
 const PLANS = {
-  STARTER: "price_starter_placeholder",
-  PRO: "price_pro_placeholder",
+  STARTER: "price_1T7Vm3GrRrrdQrkXlWEtBE00",
+  PRO: "price_1T7Vm3GrRrrdQrkXP2pTtpPQ",
 };
 
 export default function PricingPage() {
@@ -25,13 +26,21 @@ export default function PricingPage() {
         body: JSON.stringify({ priceId }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to create checkout session");
+      }
+
       const data = await response.json();
 
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
       }
-    } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("Checkout error:", error);
+      toast.error(error.message || "Something went wrong. Please try again.");
     } finally {
       setLoadingPriceId(null);
     }
@@ -141,9 +150,9 @@ export default function PricingPage() {
                   <span>Custom SLAs and performance tiers</span>
                 </li>
               </ul>
-              <Link href="mailto:patrick@linecite.com" className="inline-block text-xs font-black uppercase tracking-widest text-primary hover:gap-4 transition-all">
+              <a href="mailto:patrick@linecite.com" className="inline-block text-xs font-black uppercase tracking-widest text-primary hover:gap-4 transition-all">
                 Talk to Engineering <Icon name="chevron_right" className="w-4 h-4 inline-block ml-1" />
-              </Link>
+              </a>
             </div>
           </div>
         </section>
@@ -175,6 +184,8 @@ function PricingCard({
   onClick?: () => void,
   isLoading?: boolean
 }) {
+  const isMailto = href?.startsWith("mailto:");
+  
   return (
     <div className={`p-10 rounded-3xl border ${highlighted ? "border-primary shadow-2xl shadow-primary/10" : "border-border-dark"} bg-background-dark/50 flex flex-col`}>
       <h4 className="text-xl font-black text-white uppercase tracking-widest mb-2">{title}</h4>
@@ -192,9 +203,15 @@ function PricingCard({
         ))}
       </ul>
       {href ? (
-        <Link href={href} className={`block w-full text-center py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${highlighted ? "bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-dark" : "bg-surface-dark text-white border border-border-dark hover:bg-white/5"}`}>
-          {cta}
-        </Link>
+        isMailto ? (
+          <a href={href} className={`block w-full text-center py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${highlighted ? "bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-dark" : "bg-surface-dark text-white border border-border-dark hover:bg-white/5"}`}>
+            {cta}
+          </a>
+        ) : (
+          <Link href={href} className={`block w-full text-center py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 ${highlighted ? "bg-primary text-white shadow-xl shadow-primary/20 hover:bg-primary-dark" : "bg-surface-dark text-white border border-border-dark hover:bg-white/5"}`}>
+            {cta}
+          </Link>
+        )
       ) : (
         <button 
           onClick={onClick}
