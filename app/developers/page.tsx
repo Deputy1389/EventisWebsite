@@ -22,7 +22,7 @@ export default function DevelopersPage() {
                   <Link href="/pilot?type=api" className="flex items-center justify-center rounded-xl bg-primary px-10 py-4 text-base font-black uppercase tracking-widest text-white transition-all hover:bg-primary-dark shadow-xl shadow-primary/20 active:scale-95">
                     Request API Access
                   </Link>
-                  <Link href="#" className="flex items-center justify-center rounded-xl border border-border-dark bg-surface-dark px-10 py-4 text-base font-black uppercase tracking-widest text-white transition-all hover:bg-white/5 active:scale-95">
+                  <Link href="/docs/api" className="flex items-center justify-center rounded-xl border border-border-dark bg-surface-dark px-10 py-4 text-base font-black uppercase tracking-widest text-white transition-all hover:bg-white/5 active:scale-95">
                     Read API Docs
                   </Link>
                 </div>
