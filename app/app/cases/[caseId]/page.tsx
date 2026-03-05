@@ -41,6 +41,8 @@ type Document = {
   page_count?: number;
 };
 
+const EXPORTABLE_STATUSES = new Set(["success", "partial", "needs_review", "completed"]);
+
 export default function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
   const router = useRouter();
@@ -55,7 +57,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const latestSuccessRun = runs.find((r) => r.status === "success");
+  const latestExportableRun = runs.find((r) => EXPORTABLE_STATUSES.has((r.status || "").toLowerCase()));
   const activeRun = runs.find((r) => r.status === "pending" || r.status === "running");
   const activeRunStale = (() => {
     if (!activeRun) return false;
@@ -74,7 +76,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     }
   };
 
-  const metrics = latestSuccessRun?.metrics || {
+  const metrics = latestExportableRun?.metrics || {
     pages_total: documents.reduce((acc, d) => acc + (d.page_count || 0), 0),
     events_total: 0,
     providers_detected: 0,
@@ -162,11 +164,12 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   }
 
   function handleDownload(type: string) {
-    if (!latestSuccessRun) {
-      toast.error("No successful run yet");
+    if (!latestExportableRun) {
+      toast.error("No exportable run yet");
       return;
     }
-    window.open(`/api/citeline/runs/${latestSuccessRun.id}/artifacts/${type}`, "_blank");
+    const query = type === "pdf" ? "?export_mode=INTERNAL" : "";
+    window.open(`/api/citeline/runs/${latestExportableRun.id}/artifacts/${type}${query}`, "_blank");
   }
 
   async function handleCancelRun(runId: string) {
@@ -368,10 +371,10 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
                             </Button>
                           </div>
                         </TableCell>
-                        <TableCell><Badge variant={run.status === "success" ? "default" : "secondary"}>{run.status}</Badge></TableCell>
+                        <TableCell><Badge variant={EXPORTABLE_STATUSES.has((run.status || "").toLowerCase()) ? "default" : "secondary"}>{run.status}</Badge></TableCell>
                         <TableCell>{run.started_at ? new Date(run.started_at).toLocaleString() : "Pending"}</TableCell>
                         <TableCell className="text-right">
-                          {run.status === "success" ? (
+                          {EXPORTABLE_STATUSES.has((run.status || "").toLowerCase()) ? (
                             <Button size="sm" variant="outline" asChild>
                               <Link href={`/app/cases/${caseId}/review`}>Open Audit Mode</Link>
                             </Button>

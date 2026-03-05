@@ -2,7 +2,7 @@ const steps = [
   {
     step: "01",
     title: "Initialize Matter Intelligence",
-    desc: "Deploy Linecite against thousands of pages of raw medical records. Our engine establishes the DEI™ and CCI™ instantly.",
+    desc: "Deploy Linecite against thousands of pages of raw medical records. Our engine establishes the Exposure Score™ and CCI™ instantly.",
   },
   {
     step: "02",

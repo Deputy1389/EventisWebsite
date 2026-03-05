@@ -67,12 +67,6 @@ export function Sidebar() {
           ))}
         </nav>
 
-        <div className="rounded-2xl border bg-background/70 p-4">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Workflow Hint</p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Upload packet, run extraction, then verify in Audit Mode before export.
-          </p>
-        </div>
       </div>
 
       <div className="border-t border-sidebar-border p-4">

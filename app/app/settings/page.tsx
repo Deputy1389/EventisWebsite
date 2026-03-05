@@ -1,47 +1,109 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
-import { 
-  ShieldAlert, 
-  Share2, 
-  Users, 
-  Receipt, 
-  Activity, 
-  RotateCcw,
-  Trash2,
-  Plus
-} from "lucide-react";
+import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
+import { Plus, ShieldAlert, Share2, Users, Receipt, Activity, RotateCcw, Trash2, Sun, Moon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
+import { useTheme } from "next-themes";
+import { terms } from "@/lib/terms";
+
+const navItems = [
+  { href: "/app/cases", label: "All Matters", icon: "folder_open" },
+  { href: "/app/chronologies", label: "Chronologies", icon: "ecg_heart" },
+  { href: "/app/expert-reports", label: "Expert Reports", icon: "gavel" },
+];
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
   const [minConfidence, setMinConfidence] = useState(85);
   const [relCertainty, setRelCertainty] = useState(92);
 
+  const userInitials = session?.user?.name
+    ? session.user.name.split(" ").map((n) => n[0]).join("").toUpperCase()
+    : "JD";
+
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto p-8 md:p-12 gap-12 bg-background-dark text-slate-200">
-      <header className="mb-12 border-b border-border-dark pb-8">
-        <h1 className="text-4xl font-black text-white mb-2 tracking-tight uppercase">System Settings</h1>
-        <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">LIT-SUITE CONFIGURATION v2.4</p>
-      </header>
+    <div className="flex min-h-screen bg-background-dark text-slate-200">
+      {/* Left Sidebar */}
+      <aside className="w-56 flex-shrink-0 border-r border-border-dark bg-surface-dark flex flex-col">
+        {/* Logo */}
+        <div className="h-14 flex items-center px-4 border-b border-border-dark">
+          <Link href="/app/cases" className="flex items-center gap-2">
+            <div className="size-7 rounded bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+              L
+            </div>
+            <span className="text-white font-semibold text-sm">{terms.marketing.productName}</span>
+          </Link>
+        </div>
 
-      <div className="flex gap-12">
-        <aside className="w-64 flex-shrink-0 flex flex-col gap-8">
-          <nav className="flex flex-col gap-1">
-            <SettingsItem icon={<Activity size={18} />} label="Pipeline Configuration" />
-            <SettingsItem icon={<ShieldAlert size={18} />} label="Validation Thresholds" active />
-            <SettingsItem icon={<Share2 size={18} />} label="Export Settings" />
-            <div className="my-4 border-t border-border-dark"></div>
-            <SettingsItem icon={<Users size={18} />} label="Team Access" />
-            <SettingsItem icon={<Receipt size={18} />} label="Billing & Usage" />
-          </nav>
-        </aside>
+        {/* New Matter Button */}
+        <div className="p-3 border-b border-border-dark">
+          <Link
+            href="/app/new-case"
+            className="h-9 w-full bg-primary hover:bg-blue-600 text-white text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Matter
+          </Link>
+        </div>
 
-        <main className="flex-1 space-y-10">
+        {/* Navigation */}
+        <nav className="flex-1 p-2 space-y-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.href + item.label}
+              href={item.href}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <Icon name={item.icon as any} className="w-4 h-4" />
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom: Stats + User */}
+        <div className="p-3 border-t border-border-dark space-y-3">
+          {/* User */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="size-7 rounded-full bg-slate-700 flex items-center justify-center text-[10px] font-bold text-white">
+                {userInitials}
+              </div>
+              <span className="text-xs text-slate-400">{session?.user?.name?.split(" ")[0] || "User"}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="p-1.5 text-slate-500 hover:text-white rounded transition-colors"
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="p-1.5 text-slate-500 hover:text-white rounded transition-colors"
+              >
+                <Icon name="logout" className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto p-8">
+          <header className="mb-8">
+            <h1 className="text-2xl font-bold text-white">Settings</h1>
+          </header>
+
           <section className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white uppercase tracking-wider">Extraction Thresholds</h3>
-                <p className="text-sm text-slate-500 mt-1">Set the minimum probability score for deterministic clinical entity extraction.</p>
+                <h3 className="text-lg font-semibold text-white">Extraction Thresholds</h3>
+                <p className="text-sm text-slate-500 mt-1">Minimum probability score for clinical entity extraction.</p>
               </div>
               <button className="text-slate-500 hover:text-primary transition-colors">
                 <RotateCcw size={20} />
@@ -50,12 +112,12 @@ export default function SettingsPage() {
 
             <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 flex gap-4 items-center">
               <ShieldAlert className="text-yellow-500 shrink-0" size={20} />
-              <p className="text-xs font-bold text-yellow-200/80 uppercase tracking-widest">
-                Lowering thresholds may allow unverified entities into export. Standard litigation baseline is 85%.
+              <p className="text-xs font-medium text-yellow-200/80">
+                Lowering thresholds may allow unverified entities into export. Standard baseline is 85%.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-6">
               <ThresholdCard 
                 label="Minimum Entity Confidence" 
                 value={minConfidence} 
@@ -69,50 +131,50 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="bg-surface-dark border border-border-dark rounded-2xl p-8 space-y-8">
+          <section className="mt-10 bg-surface-dark border border-border-dark rounded-xl p-6 space-y-6">
             <div>
-              <h3 className="text-xl font-bold text-white uppercase tracking-wider">Validation Logic</h3>
-              <p className="text-sm text-slate-500 mt-1">Automated integrity gates enforced before chronology export.</p>
+              <h3 className="text-lg font-semibold text-white">Validation Logic</h3>
+              <p className="text-sm text-slate-500 mt-1">Automated integrity gates before chronology export.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <ToggleSetting title="Temporal Consistency" sub="Flag pre-DOB or impossible date sequences" checked />
-              <ToggleSetting title="Dosage Outliers" sub="Flag dosage deviations exceeding 2σ from mean" checked />
-              <ToggleSetting title="ICD-10 Mismatch" sub="Cross-reference narrative with diagnosis codes" />
-              <ToggleSetting title="Provider Credentialing" sub="Verify NPI status for extracted providers" checked />
+            <div className="grid grid-cols-2 gap-3">
+              <ToggleSetting title="Temporal Consistency" sub="Flag pre-DOB or impossible dates" checked />
+              <ToggleSetting title="Dosage Outliers" sub="Flag deviations exceeding 2σ" checked />
+              <ToggleSetting title="ICD-10 Mismatch" sub="Cross-reference with diagnosis codes" />
+              <ToggleSetting title="Provider Credentialing" sub="Verify NPI status" checked />
             </div>
           </section>
 
-          <section className="bg-surface-dark border border-border-dark rounded-2xl p-8 space-y-8">
+          <section className="mt-6 bg-surface-dark border border-border-dark rounded-xl p-6 space-y-6">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white uppercase tracking-wider">Excluded Providers</h3>
-                <p className="text-sm text-slate-500 mt-1">Suppressed entities will be programmatically filtered from all exports.</p>
+                <h3 className="text-lg font-semibold text-white">Excluded Providers</h3>
+                <p className="text-sm text-slate-500 mt-1">Filtered from all exports.</p>
               </div>
-              <button className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-primary hover:text-blue-400 transition-colors">
+              <button className="flex items-center gap-2 text-xs font-medium text-primary hover:text-blue-400 transition-colors">
                 <Plus size={16} /> Add Provider
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-border-dark">
+            <div className="overflow-hidden rounded-lg border border-border-dark">
               <table className="w-full text-left">
-                <thead className="bg-background-dark/50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                <thead className="bg-background-dark/50 text-[10px] font-medium uppercase text-slate-500">
                   <tr>
-                    <th className="px-6 py-4">Provider / Entity</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Action</th>
+                    <th className="px-4 py-3">Provider</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-dark text-sm">
-                  <tr className="bg-surface-dark/50 hover:bg-background-dark/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-white">Dr. Sarah Johnson</div>
-                      <div className="text-[10px] font-mono text-slate-600">NPI: 1928374650</div>
+                  <tr className="bg-surface-dark/50">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-white">Dr. Sarah Johnson</div>
+                      <div className="text-[10px] text-slate-600">NPI: 1928374650</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <Badge className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[9px] font-black uppercase">Conflict Filter</Badge>
+                    <td className="px-4 py-3">
+                      <Badge className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 text-[9px] font-medium">Conflict Filter</Badge>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <button className="text-slate-600 hover:text-danger transition-colors"><Trash2 size={16} /></button>
                     </td>
                   </tr>
@@ -121,31 +183,22 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <div className="flex justify-end gap-4 pt-8">
-            <button className="px-8 h-12 rounded-xl border border-border-dark text-slate-400 font-bold uppercase tracking-widest text-xs hover:bg-white/5 transition-all">Discard</button>
-            <button className="px-10 h-12 rounded-xl bg-primary hover:bg-blue-600 text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-500/20 transition-all">Save Matrix Configuration</button>
+          <div className="flex justify-end gap-3 mt-8">
+            <button className="px-6 h-10 rounded-lg border border-border-dark text-slate-400 font-medium text-sm hover:bg-white/5">Discard</button>
+            <button className="px-8 h-10 rounded-lg bg-primary hover:bg-blue-600 text-white font-medium text-sm">Save</button>
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
-  );
-}
-
-function SettingsItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
-  return (
-    <button className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${active ? 'bg-primary/10 text-primary border border-primary/10 shadow-lg shadow-primary/5' : 'text-slate-500 hover:bg-surface-dark hover:text-slate-300'}`}>
-      {icon}
-      <span className="text-[11px] font-black uppercase tracking-widest">{label}</span>
-    </button>
   );
 }
 
 function ThresholdCard({ label, value, onChange }: { label: string, value: number, onChange: (v: number) => void }) {
   return (
-    <div className="p-6 rounded-2xl bg-surface-dark border border-border-dark space-y-4">
+    <div className="p-5 rounded-xl bg-surface-dark border border-border-dark space-y-3">
       <div className="flex justify-between items-center">
-        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{label}</label>
-        <span className="text-xl font-mono font-bold text-white">{value}%</span>
+        <label className="text-xs font-medium text-slate-500">{label}</label>
+        <span className="text-lg font-mono font-bold text-white">{value}%</span>
       </div>
       <input 
         type="range" 
@@ -161,13 +214,13 @@ function ThresholdCard({ label, value, onChange }: { label: string, value: numbe
 
 function ToggleSetting({ title, sub, checked = false }: { title: string, sub: string, checked?: boolean }) {
   return (
-    <div className="flex items-center justify-between p-5 rounded-2xl border border-border-dark bg-background-dark/30 hover:bg-background-dark/50 transition-colors">
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-bold text-white uppercase tracking-wider">{title}</span>
-        <span className="text-[10px] text-slate-500 font-medium">{sub}</span>
+    <div className="flex items-center justify-between p-4 rounded-lg border border-border-dark bg-background-dark/30 hover:bg-background-dark/50 transition-colors">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-white">{title}</span>
+        <span className="text-xs text-slate-500">{sub}</span>
       </div>
-      <div className={`w-10 h-5 rounded-full p-1 transition-all ${checked ? 'bg-primary' : 'bg-slate-800'}`}>
-        <div className={`w-3 h-3 bg-white rounded-full transition-all ${checked ? 'translate-x-5' : 'translate-x-0'}`}></div>
+      <div className={`w-9 h-5 rounded-full p-0.5 transition-all ${checked ? 'bg-primary' : 'bg-slate-800'}`}>
+        <div className={`w-4 h-4 bg-white rounded-full transition-all ${checked ? 'translate-x-4' : 'translate-x-0'}`}></div>
       </div>
     </div>
   );

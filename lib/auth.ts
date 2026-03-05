@@ -12,7 +12,7 @@ const DEMO_USERS = [
         email: "demo@ontarus.ai",
         name: "John Doe",
         passwordHash: "$2b$10$3CuQgIJ6s3aX0Sd66CBgaempmxD3J5aDI8ZDx7YzGWrgEAIEMLo6i",
-        firmId: "85624cc2e5c243c796188177633ac023",
+        firmId: "7dab0ead5ad643cc9d615c2b01112dc4",
         firm: "Doe & Associates",
     },
 ];

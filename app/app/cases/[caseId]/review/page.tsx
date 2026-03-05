@@ -1,11 +1,10 @@
-﻿"use client";
+"use client";
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Loader2,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Icon } from "@/components/ui/icon";
 
 type Run = {
   id: string;
@@ -56,7 +55,7 @@ type EvidenceGraphLike = {
   extensions?: Record<string, unknown>;
 };
 
-const SUCCESS_STATUSES = new Set(["success", "partial", "completed"]);
+const SUCCESS_STATUSES = new Set(["success", "partial", "completed", "needs_review"]);
 
 export default function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = use(params);
@@ -197,7 +196,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       <header className="flex-none h-14 border-b border-border-dark bg-background-dark flex items-center justify-between px-6 z-20">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3 text-white">
-            <span className="material-symbols-outlined text-primary text-3xl">balance</span>
+            <Icon name="balance" className="text-primary text-3xl" />
             <h1 className="text-lg font-black tracking-tighter uppercase">LineCite</h1>
           </div>
           <div className="h-6 w-px bg-border-dark"></div>
@@ -209,12 +208,12 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-8 px-6">
-            <Metric title="DEI™" value={dei} color="text-white" />
+            <Metric title="EXP™" value={dei} color="text-white" />
             <Metric title="CCI™" value={cci} color="text-white" />
           </div>
           <div className="h-8 w-px bg-border-dark"></div>
           <button className="flex items-center gap-2 bg-primary hover:bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/10">
-            <span className="material-symbols-outlined text-[18px]">ios_share</span>
+            <Icon name="ios_share" className="w-[18px] h-[18px]" />
             Export Package
           </button>
         </div>
@@ -223,7 +222,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
       {/* Validation Banner */}
       <div className="flex-none bg-surface-dark/50 border-b border-border-dark px-8 py-2 flex items-center justify-between text-[10px] font-mono font-bold uppercase tracking-widest">
         <div className="flex items-center gap-3 text-slate-400">
-          <span className="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+          <Icon name="verified_user" className="w-4 h-4 text-primary" />
           <span className="text-slate-300">Forensic Validation Summary</span>    
         </div>
         <div className="flex items-center gap-8">
@@ -240,8 +239,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
           <div className="p-4 border-b border-border-dark flex items-center justify-between">
             <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Source Tree</h2>
             <div className="flex gap-2 text-slate-500">
-              <button className="hover:text-white"><span className="material-symbols-outlined text-[18px]">filter_list</span></button>
-              <button className="hover:text-white"><span className="material-symbols-outlined text-[18px]">unfold_less</span></button>
+              <button className="hover:text-white"><Icon name="filter_list" className="w-[18px] h-[18px]" /></button>
+              <button className="hover:text-white"><Icon name="unfold_less" className="w-[18px] h-[18px]" /></button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
@@ -264,8 +263,8 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
               <span className="bg-slate-800 text-slate-400 text-[9px] font-black px-2 py-0.5 rounded border border-white/5 font-mono">{events.length} EVENTS</span>
             </div>
             <div className="flex gap-4 text-slate-500">
-              <button className="hover:text-white transition-colors"><span className="material-symbols-outlined text-[20px]">sort</span></button>
-              <button className="hover:text-white transition-colors"><span className="material-symbols-outlined text-[20px]">search</span></button>
+              <button className="hover:text-white transition-colors"><Icon name="sort" className="w-5 h-5" /></button>
+              <button className="hover:text-white transition-colors"><Icon name="search" className="w-5 h-5" /></button>
             </div>
           </div>
 
@@ -312,7 +311,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
                               }}
                               className="flex items-center gap-2 bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded border border-primary/10 transition-all"
                             >
-                              <span className="material-symbols-outlined text-[14px]">link</span>
+                              <Icon name="link" className="w-3.5 h-3.5" />
                               PG {c.page_number}
                             </button>
                           ))}
@@ -331,14 +330,14 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
             <div className="absolute bottom-0 left-0 right-0 h-[280px] bg-background-dark border-t border-border-dark flex flex-col z-30 animate-in slide-in-from-bottom duration-300">
               <div className="flex items-center justify-between px-6 py-2 bg-surface-dark border-b border-border-dark h-10 shrink-0">
                 <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em]">
-                  <span className="material-symbols-outlined text-[16px] text-primary">visibility</span>
+                  <Icon name="visibility" className="w-4 h-4 text-primary" />
                   <span className="text-slate-300">Forensic Source Viewer</span>
                   <div className="h-3 w-px bg-border-dark"></div>
                   <span className="text-slate-500 font-mono">PG {selectedCitation?.page_number} • {selectedEvent?.eventType}</span>
                   <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-sm">Verified Anchor</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-500">
-                  <button onClick={() => setIsSourceOpen(false)} className="hover:text-white p-1 transition-colors"><span className="material-symbols-outlined text-[18px]">close</span></button>
+                  <button onClick={() => setIsSourceOpen(false)} className="hover:text-white p-1 transition-colors"><Icon name="close" className="w-[18px] h-[18px]" /></button>
                 </div>
               </div>
               <div className="flex-1 bg-[#1a1a1a] p-4 relative overflow-hidden flex items-center justify-center">
@@ -352,15 +351,15 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
         <aside className="w-80 bg-background-dark border-l border-border-dark flex flex-col shrink-0">
           <div className="p-4 border-b border-border-dark bg-surface-dark/30">
             <h2 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary text-[18px]">shield_person</span>
+              <Icon name="shield_person" className="text-primary w-[18px] h-[18px]" />
               Case Strength & Exposure
             </h2>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
             <ExposureSection icon="flag" title="Structural Risks" color="text-red-400">
               <div className="space-y-3">
-                {commandCenter.collapseCandidates.map((c: any, i: number) => (
-                  <RiskCard key={i} title={c.fragility_type?.replace(/_/g, ' ')} risk={c.fragility_score} text={c.why} />
+                {commandCenter.collapseCandidates.map((c, i) => (
+                  <RiskCard key={i} title={String(c.fragility_type)?.replace(/_/g, ' ')} risk={Number(c.fragility_score)} text={String(c.why)} />
                 ))}
                 {commandCenter.collapseCandidates.length === 0 && (
                   <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-[10px] font-bold text-emerald-500 uppercase tracking-widest text-center">
@@ -372,7 +371,7 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
             <ExposureSection icon="gavel" title="Evidentiary Conflicts" color="text-orange-400">
               <div className="space-y-3">
-                {commandCenter.contradictionMatrix.map((item: any, idx: number) => (
+                {commandCenter.contradictionMatrix.map((item, idx) => (
                   <div key={idx} className="p-4 bg-surface-dark border border-border-dark rounded-xl">
                     <p className="text-[11px] text-slate-300 font-medium leading-relaxed">{String(item.category || "Clinical inconsistency detected.")}</p>
                   </div>
@@ -382,11 +381,11 @@ export default function ReviewPage({ params }: { params: Promise<{ caseId: strin
 
             <ExposureSection icon="link" title="Causation Chain" color="text-emerald-400">
               <div className="pl-4 border-l border-border-dark space-y-6">
-                {(commandCenter.causationChains[0] as any)?.rungs?.map((rung: any, i: number) => (
+                {((commandCenter.causationChains[0] as Record<string, unknown>)?.rungs as Array<Record<string, unknown>> | undefined)?.map((rung, i) => (
                   <div key={i} className="relative">
                     <div className="absolute -left-[21px] top-1.5 size-2 rounded-full bg-emerald-500"></div>
-                    <h5 className="text-[10px] font-black text-white uppercase tracking-widest">{rung.rung_type}</h5>
-                    <p className="text-[10px] text-slate-500 font-mono">{rung.date}</p>
+                    <h5 className="text-[10px] font-black text-white uppercase tracking-widest">{String(rung.rung_type)}</h5>
+                    <p className="text-[10px] text-slate-500 font-mono">{String(rung.date)}</p>
                   </div>
                 ))}
               </div>
@@ -421,8 +420,8 @@ function SourceFolder({ name, children, active = false }: { name: string, childr
   return (
     <div>
       <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-2 px-2 py-1.5 text-[11px] font-bold text-slate-300 hover:bg-surface-dark rounded-lg group transition-colors uppercase tracking-widest">
-        <span className={`material-symbols-outlined text-slate-500 group-hover:text-white text-[18px] transition-transform ${open ? 'rotate-90' : ''}`}>chevron_right</span>
-        <span className={`material-symbols-outlined text-[18px] ${active ? 'text-primary' : 'text-slate-500'}`}>{open ? 'folder_open' : 'folder'}</span>
+        <Icon name="chevron_right" className={`text-slate-500 group-hover:text-white w-[18px] h-[18px] transition-transform ${open ? "rotate-90" : ""}`} />
+        <Icon name={open ? "folder_open" : "folder"} className={`w-[18px] h-[18px] ${active ? "text-primary" : "text-slate-500"}`} />
         <span className="truncate">{name}</span>
       </button>
       {open && <div className="pl-6 space-y-0.5 mt-1">{children}</div>}
@@ -433,7 +432,7 @@ function SourceFolder({ name, children, active = false }: { name: string, childr
 function SourceFile({ name, active = false }: { name: string, active?: boolean }) {
   return (
     <button className={`w-full flex items-center gap-2 px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${active ? 'text-white bg-primary/10 border-l-2 border-primary' : 'text-slate-500 hover:text-slate-300'} hover:bg-surface-dark rounded-sm group transition-all`}>
-      <span className="material-symbols-outlined text-[16px] opacity-40">description</span>
+      <Icon name="description" className="w-4 h-4 opacity-40" />
       <span className="truncate">{name}</span>
     </button>
   );
@@ -444,7 +443,7 @@ function ExposureSection({ icon, title, color, children }: { icon: string, title
     <div className="bg-surface-dark/30 border border-border-dark rounded-2xl overflow-hidden">
       <div className="p-4 flex items-center justify-between bg-surface-dark/50 border-b border-border-dark">
         <div className="flex items-center gap-3">
-          <span className={`material-symbols-outlined ${color} text-[18px]`}>{icon}</span>
+          <Icon name={icon} className={`${color} w-[18px] h-[18px]`} />
           <span className="text-[10px] font-black text-white uppercase tracking-widest">{title}</span>  
         </div>
       </div>

@@ -14,18 +14,22 @@ type RouteParams = {
 export async function GET(_: Request, { params }: RouteParams) {
   const session = await auth();
   const { runId, type } = await params;
+  const reqUrl = new URL(_.url);
+  const exportMode = (reqUrl.searchParams.get("export_mode") || "").trim().toUpperCase();
 
   if (!session?.user?.id || !session?.user?.firmId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const apiUrl = getServerApiUrl();
-  const res = await fetch(`${apiUrl}/runs/${runId}/artifacts/${type}`, {
+  const query = type === "pdf" && exportMode ? `?export_mode=${encodeURIComponent(exportMode)}` : "";
+  const backendPath = `/runs/${runId}/artifacts/${type}${query}`;
+  const res = await fetch(`${apiUrl}${backendPath}`, {
     method: "GET",
     headers: withServerAuthHeaders(undefined, {
       userId: session.user.id,
       firmId: session.user.firmId,
-    }, "GET", `/runs/${runId}/artifacts/${type}`),
+    }, "GET", backendPath),
   });
 
   if (!res.ok) {

@@ -11,22 +11,26 @@ type RouteParams = {
   params: Promise<{ matterId: string }>;
 };
 
-export async function GET(_: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const session = await auth();
   const { matterId } = await params;
+  const reqUrl = new URL(request.url);
+  const exportMode = (reqUrl.searchParams.get("export_mode") || "").trim().toUpperCase();
 
   if (!session?.user?.id || !session?.user?.firmId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const apiUrl = getServerApiUrl();
-  const res = await fetch(`${apiUrl}/matters/${matterId}/exports/latest`, {
+  const query = exportMode ? `?export_mode=${encodeURIComponent(exportMode)}` : "";
+  const backendPath = `/matters/${matterId}/exports/latest${query}`;
+  const res = await fetch(`${apiUrl}${backendPath}`, {
     method: "GET",
     cache: "no-store",
     headers: withServerAuthHeaders(undefined, {
       userId: session.user.id,
       firmId: session.user.firmId,
-    }, "GET", `/matters/${matterId}/exports/latest`),
+    }, "GET", backendPath),
   });
 
   const text = await res.text();

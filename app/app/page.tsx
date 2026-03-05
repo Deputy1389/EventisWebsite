@@ -4,12 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
-  
   FileText,
   Loader2,
   Plus,
   Scale,
-  ShieldCheck,
   Sparkles,
   Timer,
 } from "lucide-react";
@@ -196,16 +194,6 @@ export default function DashboardPage() {
                 Browse Matter Registry
               </Link>
             </Button>
-            <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
-              <div className="mb-2 flex items-center gap-2 text-foreground">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                Workflow Guidance
-              </div>
-              <p>Upload packet</p>
-              <p>Run extraction</p>
-              <p>Validate in Audit Mode</p>
-              <p>Export chronology and specials</p>
-            </div>
             <div className="rounded-xl border bg-muted/30 p-3 text-xs">
               <div className="mb-2 flex items-center gap-2 text-foreground">
                 <Timer className="h-4 w-4 text-primary" />

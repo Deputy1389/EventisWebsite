@@ -11,6 +11,8 @@ type RouteParams = {
   params: Promise<{ type: string }>;
 };
 
+const EXPORTABLE_STATUSES = new Set(["success", "partial", "needs_review", "completed"]);
+
 export async function GET(request: Request, { params }: RouteParams) {
   const session = await auth();
   const { type } = await params;
@@ -45,19 +47,21 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 
   const runs: Run[] = await runsRes.json();
-  const latestSuccessRun = runs.find((r) => r.status === "success");
+  const latestExportableRun = runs.find((r) => EXPORTABLE_STATUSES.has((r.status || "").toLowerCase()));
 
-  if (!latestSuccessRun) {
-    return NextResponse.json({ error: "No successful run found for this matter" }, { status: 404 });
+  if (!latestExportableRun) {
+    return NextResponse.json({ error: "No exportable run found for this matter" }, { status: 404 });
   }
 
   // 2. Proxy the artifact download
-  const res = await fetch(`${apiUrl}/runs/${latestSuccessRun.id}/artifacts/${type}`, {
+  const query = type === "pdf" ? "?export_mode=INTERNAL" : "";
+  const backendPath = `/runs/${latestExportableRun.id}/artifacts/${type}${query}`;
+  const res = await fetch(`${apiUrl}${backendPath}`, {
     method: "GET",
     headers: withServerAuthHeaders(undefined, {
       userId: session.user.id,
       firmId: session.user.firmId,
-    }, "GET", `/runs/${latestSuccessRun.id}/artifacts/${type}`),
+    }, "GET", backendPath),
   });
 
   if (!res.ok) {

@@ -1,9 +1,11 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 import "./globals.css";
 
@@ -33,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen font-sans antialiased`}    
+        className={`${inter.variable} ${jetbrainsMono.variable} min-h-screen font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
@@ -43,7 +45,11 @@ export default function RootLayout({
         >
           <AuthProvider>
             <div className="flex min-h-screen flex-col">
-              {children}
+              <Navbar />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
             </div>
             <Toaster />
           </AuthProvider>
