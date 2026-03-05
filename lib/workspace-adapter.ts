@@ -143,12 +143,23 @@ export function adaptEvidenceGraphToWorkspace(
     };
   });
 
+  // Build reverse page index: page_number → CitationRef[]
+  const pageIndex = new Map<number, CitationRef[]>();
+  for (const ref of citations.values()) {
+    if (ref.page_number > 0) {
+      const existing = pageIndex.get(ref.page_number) ?? [];
+      existing.push(ref);
+      pageIndex.set(ref.page_number, existing);
+    }
+  }
+
   return {
     caseId: opts.caseId,
     matterTitle: opts.matterTitle,
     runId: opts.runId,
     lastRunAt: opts.lastRunAt,
     citations,
+    pageIndex,
     visits,
     providers,
     diagnoses,

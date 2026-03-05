@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Layers } from "lucide-react";
+import { useEvidenceTrace, type TraceItem } from "@/lib/workspace-context";
+import type { CitationRef } from "@/lib/workspace-types";
 import dynamic from "next/dynamic";
 
 // Dynamically import react-pdf to avoid SSR issues
@@ -33,6 +35,8 @@ interface RecordViewerProps {
   highlightQuery?: string;
   /** Display label (e.g. "Valley Radiology MRI Report") */
   sourceLabel?: string;
+  /** Reverse page index from the workspace adapter — enables claim badges per page */
+  pageIndex?: Map<number, CitationRef[]>;
 }
 
 export function RecordViewer({
@@ -40,8 +44,10 @@ export function RecordViewer({
   initialPage = 1,
   highlightQuery,
   sourceLabel,
+  pageIndex,
 }: RecordViewerProps) {
   usePdfjsWorker();
+  const { setTraceList } = useEvidenceTrace();
 
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -119,6 +125,25 @@ export function RecordViewer({
 
       {/* PDF canvas */}
       <div className="flex-1 overflow-auto flex justify-center py-4 relative">
+        {/* Evidence anchor badge — shows how many workspace claims cite this page */}
+        {pageIndex && (() => {
+          const pageCitations = pageIndex.get(currentPage);
+          if (!pageCitations || pageCitations.length === 0) return null;
+          const items: TraceItem[] = pageCitations.map((c) => ({
+            claimText: c.snippet ?? `Citation on page ${c.page_number}`,
+            citation: c,
+          }));
+          return (
+            <button
+              onClick={() => setTraceList({ pageNumber: currentPage, items })}
+              className="absolute top-6 right-6 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyan-900/80 border border-cyan-500/50 text-cyan-300 text-[10px] font-black uppercase tracking-wide hover:bg-cyan-800/80 transition-all shadow-lg backdrop-blur-sm"
+              title={`${pageCitations.length} workspace claim${pageCitations.length !== 1 ? "s" : ""} cite this page`}
+            >
+              <Layers className="w-3 h-3" />
+              {pageCitations.length} claim{pageCitations.length !== 1 ? "s" : ""}
+            </button>
+          );
+        })()}
         {/* Highlight CSS injected inline */}
         <style>{`
           .lc-highlight {

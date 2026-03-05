@@ -182,4 +182,36 @@ export interface CaseWorkspacePayload {
   };
   events: RawEvent[];
   citations: Map<string, CitationRef>;
+  /** Reverse index: page_number → citations on that page (for Evidence Anchor overlay) */
+  pageIndex: Map<number, CitationRef[]>;
 }
+
+// ── Demand Builder types ──────────────────────────────────────────────────
+
+export type SectionKey = "liability" | "injuries" | "treatment" | "specials" | "demand_amount";
+export type DemandTone = "aggressive" | "moderate" | "conservative";
+
+export interface DemandSection {
+  text: string;
+  citations: string[];  // citation_ids
+}
+
+export type DraftSections = Partial<Record<SectionKey, DemandSection>>;
+
+export interface DraftDemand {
+  id: string;
+  case_id: string;
+  run_id: string;
+  sections: DraftSections;
+  tone: DemandTone;
+  created_at: string;
+  updated_at: string;
+}
+
+export const SECTION_LABELS: Record<SectionKey, string> = {
+  liability:     "Liability",
+  injuries:      "Injuries",
+  treatment:     "Treatment",
+  specials:      "Specials",
+  demand_amount: "Demand Amount",
+};

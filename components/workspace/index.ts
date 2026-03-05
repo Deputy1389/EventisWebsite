@@ -5,6 +5,8 @@ export { InjuriesTab } from "./InjuriesTab";
 export { TreatmentTab } from "./TreatmentTab";
 export { DefenseStrategyTab } from "./DefenseStrategyTab";
 export { PrepPackTab } from "./PrepPackTab";
+export { DemandBuilderTab } from "./DemandBuilderTab";
+export { MediationPacketTab } from "./MediationPacketTab";
 export { EvidenceTracePanel } from "./EvidenceTracePanel";
 export { CaseHealthWidget } from "./CaseHealthWidget";
 export { CitationChip } from "./CitationChip";
