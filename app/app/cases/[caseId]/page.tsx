@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parseApiError } from "@/lib/api-error";
+import { uploadMatterDocument } from "@/lib/document-upload";
 
 type Run = {
   id: string;
@@ -143,17 +144,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     if (!file) return;
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadRes = await fetch(`/api/citeline/matters/${caseId}/documents`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!uploadRes.ok) {
-        const errorText = await uploadRes.text();
-        toast.error(parseApiError(errorText) || "Upload failed");
-        return;
-      }
+      await uploadMatterDocument(caseId, file);
       const runRes = await fetch(`/api/citeline/matters/${caseId}/runs`, {
         method: "POST",
         body: JSON.stringify({}),

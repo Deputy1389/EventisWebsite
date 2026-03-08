@@ -11,6 +11,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { parseApiError } from "@/lib/api-error";
+import { uploadMatterDocument } from "@/lib/document-upload";
 
 type CreatedMatter = {
   id: string;
@@ -77,19 +78,7 @@ export default function NewCasePage() {
       const matterId = matter.id;
       setNewCaseId(matterId);
 
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const uploadRes = await fetch(`/api/citeline/matters/${matterId}/documents`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        const errorText = await uploadRes.text();
-        const errorMessage = parseApiError(errorText);
-        throw new Error(`Failed to upload document: ${errorMessage}`);
-      }
+      await uploadMatterDocument(matterId, file);
 
       // 3. Trigger extraction run
       console.log("Triggering extraction run...");
