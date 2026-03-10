@@ -122,7 +122,7 @@ export default function SignInPage() {
                   />
                   <span className="text-xs text-slate-500">Remember this device</span>
                 </label>
-                <a href="#" className="text-xs text-primary hover:underline">Forgot key?</a>
+                <a href="mailto:patrick@linecite.com?subject=Password%20Reset%20Request" className="text-xs text-primary hover:underline">Forgot key?</a>
               </div>
 
               {error && (

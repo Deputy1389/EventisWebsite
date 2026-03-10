@@ -36,6 +36,7 @@ export function Navbar() {
       <div className="hidden lg:flex items-center gap-10">
         <nav className="flex gap-8">
           <NavLink href="/law-firms" label="Law Firms" active={pathname === "/law-firms"} />
+          <NavLink href="/product" label="Product" active={pathname === "/product"} />
           <NavLink href="/developers" label="API" active={pathname === "/developers"} />
           <NavLink href="/tech" label="Methodology" active={pathname === "/tech"} />
           <NavLink href="/security" label="Security" active={pathname === "/security"} />
@@ -87,6 +88,7 @@ export function Navbar() {
         <div className="absolute top-full left-0 right-0 bg-surface-dark border-b border-border-dark p-6 flex flex-col gap-6 lg:hidden animate-in fade-in slide-in-from-top-4 duration-200">
           <nav className="flex flex-col gap-4">
             <Link href="/law-firms" className="text-sm font-bold text-slate-300">Law Firms</Link>
+            <Link href="/product" className="text-sm font-bold text-slate-300">Product</Link>
             <Link href="/developers" className="text-sm font-bold text-slate-300">API</Link>
             <Link href="/tech" className="text-sm font-bold text-slate-300">Methodology</Link>
             <Link href="/security" className="text-sm font-bold text-slate-300">Security</Link>

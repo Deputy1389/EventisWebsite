@@ -88,19 +88,29 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   };
 
   const fetchData = useCallback(async () => {
-    if (!session?.user?.firmId) return;
     try {
-      const [matterRes, runsRes, docsRes, firmRes] = await Promise.all([
+      let firmId = session?.user?.firmId;
+      if (!firmId) {
+        const firmsRes = await fetch("/api/citeline/firms");
+        if (firmsRes.ok) {
+          const firms = await firmsRes.json();
+          if (firms && firms.length > 0) firmId = firms[0].id;
+        }
+      }
+
+      const fetches: Promise<Response>[] = [
         fetch(`/api/citeline/matters/${caseId}`),
         fetch(`/api/citeline/matters/${caseId}/runs`),
         fetch(`/api/citeline/matters/${caseId}/documents`),
-        fetch(`/api/citeline/firms/${session.user.firmId}`),
-      ]);
+      ];
+      if (firmId) fetches.push(fetch(`/api/citeline/firms/${firmId}`));
+
+      const [matterRes, runsRes, docsRes, firmRes] = await Promise.all(fetches);
 
       if (matterRes.ok) setMatter(await matterRes.json());
       if (runsRes.ok) setRuns(await runsRes.json());
       if (docsRes.ok) setDocuments(await docsRes.json());
-      if (firmRes.ok) {
+      if (firmRes && firmRes.ok) {
         const firmData = await firmRes.json();
         setFirmTier(firmData.tier || "starter");
       }

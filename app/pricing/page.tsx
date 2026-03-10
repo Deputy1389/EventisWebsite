@@ -194,7 +194,7 @@ export default function PricingPage() {
               <p className="text-sm text-slate-400">Unlimited volume contracts, SSO, custom retention, API access, and dedicated support.</p>
             </div>
             <div className="flex flex-wrap gap-3 lg:justify-end">
-              <Link href="/pilot?type=law-firm" className="rounded-xl bg-primary px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-primary-dark">
+              <Link href="/pilot?type=firm" className="rounded-xl bg-primary px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-primary-dark">
                 Run Your First Case
               </Link>
               <Link href="/pilot?type=api" className="rounded-xl border border-border-dark bg-surface-dark px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/5">

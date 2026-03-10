@@ -13,82 +13,77 @@ const mockChronology = [
 
 export default function SamplePage() {
     return (
-        <div className="py-20">
+        <div className="py-20 bg-background-dark min-h-screen">
             <div className="container mx-auto px-4">
                 {/* Header */}
                 <div className="text-center mb-16">
-                    <h1 className="text-4xl font-bold tracking-tight mb-6">See the Output</h1>
-                    <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                        Linecite produces structured, audit-ready reports. Here is a preview of the Medical Chronology format.
+                    <p className="text-[10px] font-black uppercase tracking-[0.35em] text-primary mb-4">Output Preview</p>
+                    <h1 className="text-4xl font-black uppercase tracking-widest text-white mb-6">See the Output</h1>
+                    <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+                        LineCite produces structured, audit-ready reports. Here is a preview of the Medical Chronology format.
                     </p>
                 </div>
 
                 {/* Mock Table */}
-                <div className="max-w-5xl mx-auto border rounded-xl shadow-sm overflow-hidden mb-16">
-                    <div className="bg-muted px-6 py-4 border-b flex justify-between items-center">
-                        <h3 className="font-bold flex items-center gap-2">
+                <div className="max-w-5xl mx-auto border border-border-dark rounded-xl overflow-hidden mb-16">
+                    <div className="bg-surface-dark px-6 py-4 border-b border-border-dark flex justify-between items-center">
+                        <h3 className="font-bold text-white flex items-center gap-2">
                             <FileText className="h-5 w-5 text-primary" />
                             Chronology Preview
                         </h3>
-                        <span className="text-xs text-muted-foreground bg-background px-2 py-1 rounded border">DOE, John - Case #24-991</span>
+                        <span className="text-xs text-slate-500 bg-background-dark px-2 py-1 rounded border border-border-dark">DOE, John - Case #24-991</span>
                     </div>
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[120px]">Date</TableHead>
-                                <TableHead className="w-[200px]">Provider</TableHead>
-                                <TableHead className="w-[200px]">Event Type</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="w-[80px] text-right">Source</TableHead>
+                            <TableRow className="border-border-dark">
+                                <TableHead className="w-[120px] text-slate-400">Date</TableHead>
+                                <TableHead className="w-[200px] text-slate-400">Provider</TableHead>
+                                <TableHead className="w-[200px] text-slate-400">Event Type</TableHead>
+                                <TableHead className="text-slate-400">Description</TableHead>
+                                <TableHead className="w-[80px] text-right text-slate-400">Source</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {mockChronology.map((row, index) => (
-                                <TableRow key={index}>
-                                    <TableCell className="font-medium whitespace-nowrap">{row.date}</TableCell>
-                                    <TableCell>{row.provider}</TableCell>
-                                    <TableCell>{row.event}</TableCell>
-                                    <TableCell className="text-muted-foreground">{row.description}</TableCell>
+                                <TableRow key={index} className="border-border-dark">
+                                    <TableCell className="font-medium whitespace-nowrap text-white">{row.date}</TableCell>
+                                    <TableCell className="text-slate-300">{row.provider}</TableCell>
+                                    <TableCell className="text-slate-300">{row.event}</TableCell>
+                                    <TableCell className="text-slate-400">{row.description}</TableCell>
                                     <TableCell className="text-right">
-                                        <span className="text-primary hover:underline cursor-pointer text-xs">{row.source}</span>
+                                        <span className="text-primary text-xs">{row.source}</span>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
                     </Table>
-                    <div className="bg-muted/30 px-6 py-4 border-t text-center text-sm text-muted-foreground">
+                    <div className="bg-surface-dark/50 px-6 py-4 border-t border-border-dark text-center text-sm text-slate-500">
                         Showing 5 of 142 events extracted from 450 pages.
                     </div>
                 </div>
 
                 {/* Download Buttons */}
                 <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Button variant="outline" className="h-auto py-6 flex flex-col gap-2" asChild>
-                        <Link href="/sample/chronology_sample.docx" target="_blank">
-                            <FileText className="h-8 w-8 text-primary mb-1" />
-                            <span className="font-bold">Chronology (DOCX)</span>
-                            <span className="text-xs text-muted-foreground font-normal">Editable Word Document</span>
-                        </Link>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-6 flex flex-col gap-2" asChild>
-                        <Link href="/sample/specials_sample.pdf" target="_blank">
-                            <Calculator className="h-8 w-8 text-primary mb-1" />
-                            <span className="font-bold">Specials Summary</span>
-                            <span className="text-xs text-muted-foreground font-normal">Billing Ledger PDF</span>
-                        </Link>
-                    </Button>
-                    <Button variant="outline" className="h-auto py-6 flex flex-col gap-2" asChild>
-                        <Link href="/sample/missing_records_sample.pdf" target="_blank">
-                            <FileWarning className="h-8 w-8 text-primary mb-1" />
-                            <span className="font-bold">Missing Records</span>
-                            <span className="text-xs text-muted-foreground font-normal">Gap Analysis Report</span>
-                        </Link>
-                    </Button>
+                    <div className="border border-border-dark bg-surface-dark rounded-xl p-6 flex flex-col items-center gap-2 opacity-60">
+                        <FileText className="h-8 w-8 text-primary mb-1" />
+                        <span className="font-bold text-white">Chronology (PDF)</span>
+                        <span className="text-xs text-slate-500 font-normal">Sample downloads coming soon</span>
+                    </div>
+                    <div className="border border-border-dark bg-surface-dark rounded-xl p-6 flex flex-col items-center gap-2 opacity-60">
+                        <Calculator className="h-8 w-8 text-primary mb-1" />
+                        <span className="font-bold text-white">Specials Summary</span>
+                        <span className="text-xs text-slate-500 font-normal">Sample downloads coming soon</span>
+                    </div>
+                    <div className="border border-border-dark bg-surface-dark rounded-xl p-6 flex flex-col items-center gap-2 opacity-60">
+                        <FileWarning className="h-8 w-8 text-primary mb-1" />
+                        <span className="font-bold text-white">Missing Records</span>
+                        <span className="text-xs text-slate-500 font-normal">Sample downloads coming soon</span>
+                    </div>
                 </div>
 
                 <div className="text-center mt-16">
-                    <h3 className="text-2xl font-bold mb-6">Ready to try it on your own files?</h3>
-                    <Button size="lg" asChild>
+                    <h3 className="text-2xl font-black uppercase tracking-widest text-white mb-6">Ready to try it on your own files?</h3>
+                    <Button size="lg" asChild className="font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20">
                         <Link href="/pilot">Request a Free Pilot</Link>
                     </Button>
                 </div>
