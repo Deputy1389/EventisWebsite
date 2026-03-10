@@ -25,6 +25,43 @@ function safeObj<T extends Record<string, unknown>>(val: unknown): T {
   return {} as T;
 }
 
+function safeStringArray(val: unknown): string[] {
+  if (!Array.isArray(val)) return [];
+  return val.map((item) => String(item ?? "").trim()).filter(Boolean);
+}
+
+function isSentinelDate(value: unknown): boolean {
+  if (!value) return false;
+  const text = String(value).trim().toLowerCase();
+  return (
+    text === "1900-01-01" ||
+    text.startsWith("1900-01-01t") ||
+    text === "unknown" ||
+    text === "undated" ||
+    text === "date not documented"
+  );
+}
+
+function displayDateLabel(dateObj: Record<string, unknown>): string {
+  const normalized = dateObj.normalized;
+  const original = dateObj.original_text;
+  if (!isSentinelDate(normalized)) {
+    const value = String(normalized ?? "").trim();
+    if (value) return value;
+  }
+  if (!isSentinelDate(original)) {
+    const value = String(original ?? "").trim();
+    if (value) return value;
+  }
+  return "Undated";
+}
+
+function displayDateOrNull(value: unknown): string | null {
+  if (isSentinelDate(value)) return null;
+  const text = String(value ?? "").trim();
+  return text || null;
+}
+
 export function adaptEvidenceGraphToWorkspace(
   raw: unknown,
   opts: { caseId: string; matterTitle: string; runId: string; lastRunAt?: string }
@@ -36,6 +73,19 @@ export function adaptEvidenceGraphToWorkspace(
   const ext = safeObj<Record<string, unknown>>(
     (inner.extensions as unknown) ?? (graph.extensions as unknown)
   );
+  const litigationSafe = safeObj<Record<string, unknown>>(ext.litigation_safe_v1 as unknown);
+  const rawFailureReasons = safeArray<Record<string, unknown>>(litigationSafe.failure_reasons as unknown);
+  const reviewReasons = [
+    ...safeStringArray(litigationSafe.review_reasons as unknown),
+    ...rawFailureReasons
+      .map((row) => String(row.message ?? row.code ?? "").trim())
+      .filter(Boolean),
+  ].filter((value, index, arr) => arr.indexOf(value) === index);
+  const rawExportStatus = String(litigationSafe.status ?? "").trim().toUpperCase();
+  const exportStatus =
+    rawExportStatus === "VERIFIED" || rawExportStatus === "REVIEW_RECOMMENDED" || rawExportStatus === "BLOCKED"
+      ? (rawExportStatus as CaseWorkspacePayload["exportStatus"])
+      : undefined;
 
   // Build citation map
   const rawCitations = safeArray<Record<string, unknown>>(
@@ -50,22 +100,42 @@ export function adaptEvidenceGraphToWorkspace(
         source_document_id: String(c.source_document_id ?? ""),
         page_number: Number(c.page_number ?? 0),
         snippet: c.snippet ? String(c.snippet) : undefined,
+        lock_status: c.lock_status ? String(c.lock_status) as CitationRef["lock_status"] : undefined,
+        lock_strategy: c.lock_strategy ? String(c.lock_strategy) as CitationRef["lock_strategy"] : undefined,
+        text_start: Number.isFinite(Number(c.text_start)) ? Number(c.text_start) : undefined,
+        text_end: Number.isFinite(Number(c.text_end)) ? Number(c.text_end) : undefined,
+        unresolved_reason: c.unresolved_reason ? String(c.unresolved_reason) : undefined,
       });
     }
   }
 
   // Registries
-  const visits = safeArray<VisitRow>(ext.visit_abstraction_registry as unknown);
+  const visits = safeArray<VisitRow>(ext.visit_abstraction_registry as unknown).map((row) => ({
+    ...row,
+    date: displayDateOrNull(row.date),
+  }));
   const providers = safeArray<ProviderRoleRow>(ext.provider_role_registry as unknown);
-  const diagnoses = safeArray<DiagnosisRow>(ext.diagnosis_registry as unknown);
+  const diagnoses = safeArray<DiagnosisRow>(ext.diagnosis_registry as unknown).map((row) => ({
+    ...row,
+    first_seen_date: displayDateOrNull(row.first_seen_date),
+  }));
   const clusters = safeArray<InjuryClusterRow>(ext.injury_clusters as unknown);
   const clusterSeverity = safeArray<InjuryClusterSeverityRow>(ext.injury_cluster_severity as unknown);
-  const escalationPath = safeArray<EscalationStep>(ext.treatment_escalation_path as unknown);
+  const escalationPath = safeArray<EscalationStep>(ext.treatment_escalation_path as unknown).map((row) => ({
+    ...row,
+    date: displayDateOrNull(row.date),
+  }));
 
   const causationRaw = safeObj<Record<string, unknown>>(ext.causation_timeline_registry as unknown);
   const causationTimeline: CausationTimeline = {
-    rungs: safeArray(causationRaw.rungs as unknown),
-    missing_rungs: safeArray(causationRaw.missing_rungs as unknown),
+    rungs: safeArray<CausationTimeline["rungs"][number]>(causationRaw.rungs as unknown).map((row) => ({
+      ...row,
+      date: displayDateOrNull(row.date),
+    })),
+    missing_rungs: safeArray<CausationTimeline["missing_rungs"][number]>(causationRaw.missing_rungs as unknown).map((row) => ({
+      ...row,
+      date: displayDateOrNull(row.date),
+    })),
   };
 
   // Defense attack map
@@ -104,7 +174,7 @@ export function adaptEvidenceGraphToWorkspace(
   );
   const events: RawEvent[] = rawEvents.map((e, idx) => {
     const dateObj = safeObj<Record<string, unknown>>(e.date as unknown);
-    const dateLabel = String(dateObj.normalized ?? dateObj.original_text ?? "Undated");
+    const dateLabel = displayDateLabel(dateObj);
     const eventType = String(e.event_type ?? "Encounter")
       .replace(/_/g, " ")
       .replace(/\b\w/g, (l) => l.toUpperCase());
@@ -158,6 +228,8 @@ export function adaptEvidenceGraphToWorkspace(
     matterTitle: opts.matterTitle,
     runId: opts.runId,
     lastRunAt: opts.lastRunAt,
+    exportStatus,
+    reviewReasons,
     citations,
     pageIndex,
     visits,

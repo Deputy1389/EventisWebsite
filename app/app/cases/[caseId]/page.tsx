@@ -42,6 +42,11 @@ type Document = {
   page_count?: number;
 };
 
+type LatestExport = {
+  run_id: string;
+  status: string;
+};
+
 const EXPORTABLE_STATUSES = new Set(["success", "partial", "needs_review", "completed"]);
 
 export default function CaseDetailPage({ params }: { params: Promise<{ caseId: string }> }) {
@@ -52,6 +57,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
   const [matter, setMatter] = useState<Matter | null>(null);
   const [firmTier, setFirmTier] = useState<string>("starter");
   const [runs, setRuns] = useState<Run[]>([]);
+  const [latestExport, setLatestExport] = useState<LatestExport | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -59,7 +65,9 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const latestExportableRun = runs.find((r) => EXPORTABLE_STATUSES.has((r.status || "").toLowerCase()));
+  const latestExportableRun =
+    (latestExport ? runs.find((r) => r.id === latestExport.run_id) : null) ??
+    runs.find((r) => EXPORTABLE_STATUSES.has((r.status || "").toLowerCase()));
   const activeRun = runs.find((r) => r.status === "pending" || r.status === "running");
   
   const isPro = firmTier === "pro" || firmTier === "enterprise";
@@ -102,14 +110,20 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
         fetch(`/api/citeline/matters/${caseId}`),
         fetch(`/api/citeline/matters/${caseId}/runs`),
         fetch(`/api/citeline/matters/${caseId}/documents`),
+        fetch(`/api/citeline/matters/${caseId}/exports/latest?export_mode=INTERNAL`),
       ];
       if (firmId) fetches.push(fetch(`/api/citeline/firms/${firmId}`));
 
-      const [matterRes, runsRes, docsRes, firmRes] = await Promise.all(fetches);
+      const [matterRes, runsRes, docsRes, exportsRes, firmRes] = await Promise.all(fetches);
 
       if (matterRes.ok) setMatter(await matterRes.json());
       if (runsRes.ok) setRuns(await runsRes.json());
       if (docsRes.ok) setDocuments(await docsRes.json());
+      if (exportsRes.ok) {
+        setLatestExport(await exportsRes.json());
+      } else if (exportsRes.status === 404) {
+        setLatestExport(null);
+      }
       if (firmRes && firmRes.ok) {
         const firmData = await firmRes.json();
         setFirmTier(firmData.tier || "starter");
@@ -157,6 +171,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
       await uploadMatterDocument(caseId, file);
       const runRes = await fetch(`/api/citeline/matters/${caseId}/runs`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
       if (!runRes.ok) {
@@ -226,6 +241,7 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
     }
     const res = await fetch(`/api/citeline/matters/${caseId}/runs`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
     if (!res.ok) {

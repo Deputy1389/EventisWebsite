@@ -84,12 +84,14 @@ export default function NewCasePage() {
       console.log("Triggering extraction run...");
       const runRes = await fetch(`/api/citeline/matters/${matterId}/runs`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
 
       if (!runRes.ok) {
-        console.error("Failed to trigger extraction:", await runRes.text());
-        // We don't throw here so the user at least sees the upload worked
+        const errorText = await runRes.text();
+        console.error("Failed to trigger extraction:", errorText);
+        throw new Error(`Case uploaded but extraction did not start: ${parseApiError(errorText)}`);
       }
 
       setIsDone(true);
@@ -103,6 +105,7 @@ export default function NewCasePage() {
       console.error("Upload error:", error);
       const message = error instanceof Error ? error.message : "Something went wrong during upload";
       toast.error(message);
+      setIsDone(false);
     } finally {
       setIsProcessing(false);
     }

@@ -11,8 +11,6 @@ type RouteParams = {
   params: Promise<{ type: string }>;
 };
 
-const EXPORTABLE_STATUSES = new Set(["success", "partial", "needs_review", "completed"]);
-
 export async function GET(request: Request, { params }: RouteParams) {
   const session = await auth();
   const { type } = await params;
@@ -28,34 +26,34 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 
   const apiUrl = getServerApiUrl();
-  
-  type Run = {
-    id: string;
-    status: string;
-  };
-
-  // 1. Get all runs for this matter
-  const runsRes = await fetch(`${apiUrl}/matters/${matterId}/runs`, {
+  const exportMode = type === "pdf" ? "INTERNAL" : "";
+  const query = exportMode ? `?export_mode=${encodeURIComponent(exportMode)}` : "";
+  const exportsPath = `/matters/${matterId}/exports/latest${query}`;
+  const exportsRes = await fetch(`${apiUrl}${exportsPath}`, {
     headers: withServerAuthHeaders(undefined, {
       userId: session.user.id,
       firmId: session.user.firmId,
-    }, "GET", `/matters/${matterId}/runs`),
+    }, "GET", exportsPath),
   });
 
-  if (!runsRes.ok) {
-    return new NextResponse(await runsRes.text(), { status: runsRes.status });
+  if (!exportsRes.ok) {
+    return new NextResponse(await exportsRes.text(), { status: exportsRes.status });
   }
 
-  const runs: Run[] = await runsRes.json();
-  const latestExportableRun = runs.find((r) => EXPORTABLE_STATUSES.has((r.status || "").toLowerCase()));
+  type LatestExport = {
+    run_id: string;
+    artifacts: Array<{ artifact_type: string }>;
+  };
 
-  if (!latestExportableRun) {
-    return NextResponse.json({ error: "No exportable run found for this matter" }, { status: 404 });
+  const latestExport: LatestExport = await exportsRes.json();
+  const hasArtifact = latestExport.artifacts.some(
+    (artifact) => String(artifact.artifact_type || "").toLowerCase() === String(type || "").toLowerCase()
+  );
+  if (!hasArtifact) {
+    return NextResponse.json({ error: `No committed ${type} artifact found for this matter` }, { status: 404 });
   }
 
-  // 2. Proxy the artifact download
-  const query = type === "pdf" ? "?export_mode=INTERNAL" : "";
-  const backendPath = `/runs/${latestExportableRun.id}/artifacts/${type}${query}`;
+  const backendPath = `/runs/${latestExport.run_id}/artifacts/${type}${query}`;
   const res = await fetch(`${apiUrl}${backendPath}`, {
     method: "GET",
     headers: withServerAuthHeaders(undefined, {

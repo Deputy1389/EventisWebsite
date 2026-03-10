@@ -7,6 +7,11 @@ export interface CitationRef {
   source_document_id: string;
   page_number: number;
   snippet?: string;
+  lock_status?: "locked" | "fuzzy" | "unresolved";
+  lock_strategy?: "exact_substring" | "ellipsis_bridge" | "normalized_substring" | "none";
+  text_start?: number;
+  text_end?: number;
+  unresolved_reason?: string;
 }
 
 export type EncounterType =
@@ -161,6 +166,8 @@ export interface CaseWorkspacePayload {
   runId: string;
   doi?: string;
   lastRunAt?: string;
+  exportStatus?: "VERIFIED" | "REVIEW_RECOMMENDED" | "BLOCKED";
+  reviewReasons: string[];
   visits: VisitRow[];
   providers: ProviderRoleRow[];
   diagnoses: DiagnosisRow[];

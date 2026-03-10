@@ -52,18 +52,19 @@ export function WorkspaceShell({ payload }: WorkspaceShellProps) {
 
   const sli = payload.settlement.leverage?.settlement_leverage_index;
   const sliPct = sli != null ? Math.round(sli * 100) : null;
+  const exportStatus = payload.exportStatus ?? "REVIEW_RECOMMENDED";
   const statusColor =
-    payload.health.bucketFillRate >= 0.8
+    exportStatus === "VERIFIED"
       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-      : payload.health.bucketFillRate >= 0.6
-      ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-      : "bg-red-500/10 text-red-400 border-red-500/20";
+      : exportStatus === "BLOCKED"
+      ? "bg-red-500/10 text-red-400 border-red-500/20"
+      : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
   const statusLabel =
-    payload.health.bucketFillRate >= 0.8
-      ? "Ready"
-      : payload.health.encountersMissingBuckets > 0
-      ? "Needs Review"
-      : "Ready";
+    exportStatus === "VERIFIED"
+      ? "Verified"
+      : exportStatus === "BLOCKED"
+      ? "Action Required"
+      : "Review Recommended";
 
   return (
     <EvidenceTraceProvider>
@@ -125,7 +126,12 @@ export function WorkspaceShell({ payload }: WorkspaceShellProps) {
                 );
               })}
             </nav>
-            <CaseHealthWidget health={payload.health} lastRunAt={payload.lastRunAt} />
+            <CaseHealthWidget
+              health={payload.health}
+              lastRunAt={payload.lastRunAt}
+              exportStatus={payload.exportStatus}
+              reviewReasons={payload.reviewReasons}
+            />
           </aside>
 
           {/* Main content */}
