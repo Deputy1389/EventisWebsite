@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { parseApiError } from "@/lib/api-error";
 import { uploadMatterDocument } from "@/lib/document-upload";
+import { fetchCanonicalLatestExport, type LatestExport } from "@/lib/latest-export";
 
 type Run = {
   id: string;
@@ -40,11 +41,6 @@ type Document = {
   uploaded_at: string;
   bytes: number;
   page_count?: number;
-};
-
-type LatestExport = {
-  run_id: string;
-  status: string;
 };
 
 const EXPORTABLE_STATUSES = new Set(["success", "partial", "needs_review", "completed"]);
@@ -106,24 +102,23 @@ export default function CaseDetailPage({ params }: { params: Promise<{ caseId: s
         }
       }
 
-      const fetches: Promise<Response>[] = [
+      const baseFetches: Promise<Response>[] = [
         fetch(`/api/citeline/matters/${caseId}`),
         fetch(`/api/citeline/matters/${caseId}/runs`),
         fetch(`/api/citeline/matters/${caseId}/documents`),
-        fetch(`/api/citeline/matters/${caseId}/exports/latest?export_mode=INTERNAL`),
       ];
-      if (firmId) fetches.push(fetch(`/api/citeline/firms/${firmId}`));
+      const firmFetch = firmId ? fetch(`/api/citeline/firms/${firmId}`) : Promise.resolve(undefined);
 
-      const [matterRes, runsRes, docsRes, exportsRes, firmRes] = await Promise.all(fetches);
+      const [matterRes, runsRes, docsRes, latestExportRes, firmRes] = await Promise.all([
+        ...baseFetches,
+        fetchCanonicalLatestExport(caseId),
+        firmFetch,
+      ]);
 
       if (matterRes.ok) setMatter(await matterRes.json());
       if (runsRes.ok) setRuns(await runsRes.json());
       if (docsRes.ok) setDocuments(await docsRes.json());
-      if (exportsRes.ok) {
-        setLatestExport(await exportsRes.json());
-      } else if (exportsRes.status === 404) {
-        setLatestExport(null);
-      }
+      setLatestExport(latestExportRes.latestExport as LatestExport | null);
       if (firmRes && firmRes.ok) {
         const firmData = await firmRes.json();
         setFirmTier(firmData.tier || "starter");

@@ -3,18 +3,13 @@
 import { use, useCallback, useEffect, useState, Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { fetchCanonicalLatestExport, type LatestExport } from "@/lib/latest-export";
 import { adaptEvidenceGraphToWorkspace } from "@/lib/workspace-adapter";
 import type { CaseWorkspacePayload } from "@/lib/workspace-types";
 
 type Matter = {
   id: string;
   title: string;
-};
-
-type LatestExport = {
-  run_id: string;
-  status: string;
-  artifacts: Array<{ artifact_type: string }>;
 };
 
 function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
@@ -32,16 +27,10 @@ function ReviewPage({ params }: { params: Promise<{ caseId: string }> }) {
     try {
       const [matterRes, exportsRes] = await Promise.all([
         fetch(`/api/citeline/matters/${caseId}`),
-        fetch(`/api/citeline/matters/${caseId}/exports/latest?export_mode=INTERNAL`),
+        fetchCanonicalLatestExport(caseId),
       ]);
       if (matterRes.ok) setMatter(await matterRes.json());
-      if (exportsRes.ok) {
-        setLatestExport((await exportsRes.json()) as LatestExport);
-      } else if (exportsRes.status === 404) {
-        setLatestExport(null);
-      } else {
-        setError(`Failed to load latest export (HTTP ${exportsRes.status})`);
-      }
+      setLatestExport(exportsRes.latestExport as LatestExport | null);
     } catch (e) {
       setError(String(e));
     } finally {
