@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getServerApiUrl } from "@/lib/citeline";
 import { withServerAuthHeaders } from "@/lib/citeline-server";
 import { getFirmId } from "@/lib/get-firm-id";
+import { buildWebsiteRunRequestPayload } from "@/lib/run-request";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const firmId = await getFirmId(session);
 
-  const payload = await request.text();
+  const payload = buildWebsiteRunRequestPayload(await request.text());
   const apiUrl = getServerApiUrl();
   const res = await fetch(`${apiUrl}/matters/${matterId}/runs`, {
     method: "POST",
@@ -63,7 +64,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       "POST",
       `/matters/${matterId}/runs`
     ),
-    body: payload || "{}",
+    body: payload,
   });
 
   const text = await res.text();
